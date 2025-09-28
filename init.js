@@ -275,28 +275,28 @@ class TemaApp extends Adw.Application {
 
             const homeDir = GLib.get_home_dir();
             const configBase = homeDir + '/.config';
-            const templatesDir = GLib.get_current_dir() + '/templates';
+            const scriptDir = GLib.path_get_dirname(GLib.get_prgname() || import.meta.url.replace('file://', ''));
+            const templatesDir = scriptDir + '/templates';
             const temaThemeDir = configBase + '/omarchy/themes/tema';
 
-            // Template mappings: [template_file, standard_output, tema_output]
+            // Template mappings: [template_file, tema_output]
             const templateMappings = [
-                ['alacritty.toml', configBase + '/alacritty/alacritty.toml', temaThemeDir + '/alacritty.toml'],
-                ['waybar.css', configBase + '/waybar/colors.css', temaThemeDir + '/waybar.css'],
-                ['hyprland.conf', configBase + '/hypr/colors.conf', temaThemeDir + '/hyprland.conf'],
-                ['mako.ini', configBase + '/mako/config', temaThemeDir + '/mako.ini'],
-                ['ghostty.conf', configBase + '/ghostty/config', temaThemeDir + '/ghostty.conf'],
-                ['wofi.css', configBase + '/wofi/colors.css', temaThemeDir + '/wofi.css'],
-                ['btop.theme', configBase + '/btop/themes/tema.theme', temaThemeDir + '/btop.theme'],
-                ['swayosd.css', configBase + '/swayosd/style.css', temaThemeDir + '/swayosd.css'],
-                ['walker.css', configBase + '/walker/themes/tema.css', temaThemeDir + '/walker.css'],
-                ['hyprlock.conf', configBase + '/hypr/hyprlock.conf', temaThemeDir + '/hyprlock.conf']
+                ['alacritty.toml', temaThemeDir + '/alacritty.toml'],
+                ['waybar.css', temaThemeDir + '/waybar.css'],
+                ['hyprland.conf', temaThemeDir + '/hyprland.conf'],
+                ['mako.ini', temaThemeDir + '/mako.ini'],
+                ['ghostty.conf', temaThemeDir + '/ghostty.conf'],
+                ['wofi.css', temaThemeDir + '/wofi.css'],
+                ['btop.theme', temaThemeDir + '/btop.theme'],
+                ['swayosd.css', temaThemeDir + '/swayosd.css'],
+                ['walker.css', temaThemeDir + '/walker.css'],
+                ['hyprlock.conf', temaThemeDir + '/hyprlock.conf']
             ];
 
             // Process each template
-            for (const [templateName, standardOutput, temaOutput] of templateMappings) {
+            for (const [templateName, temaOutput] of templateMappings) {
                 const templateFile = Gio.File.new_for_path(templatesDir + '/' + templateName);
                 if (templateFile.query_exists(null)) {
-                    this.processTemplate(templateFile.get_path(), standardOutput, colors);
                     this.processTemplate(templateFile.get_path(), temaOutput, colors);
                 }
             }
