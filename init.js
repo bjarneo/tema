@@ -92,6 +92,7 @@ class TemaApp extends Adw.Application {
                 null
             );
 
+            const imageFiles = [];
             let fileInfo;
             while ((fileInfo = enumerator.next_file(null)) !== null) {
                 const fileName = fileInfo.get_name();
@@ -99,11 +100,15 @@ class TemaApp extends Adw.Application {
 
                 // Check if it's an image file
                 if (this.isImageFile(fileName)) {
-                    this.createImageThumbnail(grid, filePath, fileName);
+                    imageFiles.push({ filePath, fileName });
                 }
             }
 
             enumerator.close(null);
+
+            // Load thumbnails asynchronously
+            this.loadThumbnailsAsync(grid, imageFiles, 0);
+
         } catch (error) {
             print('Error reading wallpapers directory:', error.message);
             const label = new Gtk.Label({
@@ -114,13 +119,71 @@ class TemaApp extends Adw.Application {
         }
     }
 
-    isImageFile(fileName) {
-        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff'];
-        const lowerFileName = fileName.toLowerCase();
-        return imageExtensions.some(ext => lowerFileName.endsWith(ext));
+    loadThumbnailsAsync(grid, imageFiles, index) {
+        if (index >= imageFiles.length) {
+            return; // All thumbnails loaded
+        }
+
+        const { filePath, fileName } = imageFiles[index];
+
+        // Create placeholder first for immediate feedback
+        const placeholder = this.createPlaceholder(grid, filePath, fileName);
+
+        // Load thumbnail asynchronously using GLib.idle_add
+        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            try {
+                this.loadThumbnailForPlaceholder(placeholder, filePath, fileName);
+            } catch (error) {
+                print(`Error loading thumbnail for ${fileName}:`, error.message);
+            }
+
+            // Load next thumbnail
+            this.loadThumbnailsAsync(grid, imageFiles, index + 1);
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
-    createImageThumbnail(grid, filePath, fileName) {
+    createPlaceholder(grid, filePath, fileName) {
+        // Create placeholder with spinner
+        const spinner = new Gtk.Spinner({
+            spinning: true,
+            width_request: 128,
+            height_request: 128
+        });
+
+        // Create label for filename
+        const label = new Gtk.Label({
+            label: fileName,
+            ellipsize: 3, // PANGO_ELLIPSIZE_END
+            max_width_chars: 15,
+            margin_top: 6
+        });
+
+        // Create container box
+        const box = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 6,
+            margin_top: 6,
+            margin_bottom: 6,
+            margin_start: 6,
+            margin_end: 6
+        });
+
+        box.append(spinner);
+        box.append(label);
+
+        // Store the file path in the box for later use
+        box._filePath = filePath;
+        box._fileName = fileName;
+        box._spinner = spinner;
+
+        // Add to grid
+        grid.append(box);
+
+        return box;
+    }
+
+    loadThumbnailForPlaceholder(placeholder, filePath, fileName) {
         try {
             // Load the image and create thumbnail
             const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
@@ -135,38 +198,32 @@ class TemaApp extends Adw.Application {
             image.set_pixbuf(pixbuf);
             image.set_can_shrink(false);
 
-            // Create label for filename
-            const label = new Gtk.Label({
-                label: fileName,
-                ellipsize: 3, // PANGO_ELLIPSIZE_END
-                max_width_chars: 15,
-                margin_top: 6
-            });
-
-            // Create container box
-            const box = new Gtk.Box({
-                orientation: Gtk.Orientation.VERTICAL,
-                spacing: 6,
-                margin_top: 6,
-                margin_bottom: 6,
-                margin_start: 6,
-                margin_end: 6
-            });
-
-            box.append(image);
-            box.append(label);
-
-            // Store the file path in the box for later use
-            box._filePath = filePath;
-            box._fileName = fileName;
-
-            // Add to grid
-            grid.append(box);
+            // Replace spinner with image
+            const spinner = placeholder._spinner;
+            placeholder.remove(spinner);
+            placeholder.prepend(image);
 
         } catch (error) {
             print(`Error loading image ${fileName}:`, error.message);
+            // Replace spinner with error icon
+            const spinner = placeholder._spinner;
+            placeholder.remove(spinner);
+
+            const errorLabel = new Gtk.Label({
+                label: '❌',
+                width_request: 128,
+                height_request: 128
+            });
+            placeholder.prepend(errorLabel);
         }
     }
+
+    isImageFile(fileName) {
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff'];
+        const lowerFileName = fileName.toLowerCase();
+        return imageExtensions.some(ext => lowerFileName.endsWith(ext));
+    }
+
 
     setupKeyboardHandling(window, grid) {
         // Create event controller for key events
