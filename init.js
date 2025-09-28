@@ -235,7 +235,10 @@ class TemaApp extends Adw.Application {
                 return;
             }
 
-            // Run wal command
+            // Show spinner dialog
+            const spinnerDialog = this.showSpinnerDialog();
+
+            // Run wal command asynchronously
             const walArgs = lightMode ? ['wal', '-l', '-i', imagePath] : ['wal', '-i', imagePath];
             const walProcess = new Gio.Subprocess({
                 argv: walArgs,
@@ -243,23 +246,64 @@ class TemaApp extends Adw.Application {
             });
             walProcess.init(null);
 
-            const [, walStdout, walStderr] = walProcess.communicate_utf8(null, null);
+            // Use async communication
+            walProcess.communicate_utf8_async(null, null, (source, result) => {
+                try {
+                    const [, walStdout, walStderr] = walProcess.communicate_utf8_finish(result);
 
-            if (walProcess.get_successful()) {
-                const mode = lightMode ? 'light' : 'dark';
-                print(`Wallpaper and colors set using wal (${mode} mode): ${fileName}`);
+                    // Close spinner dialog
+                    spinnerDialog.destroy();
 
-                // Generate templates
-                this.generateTemplates();
+                    if (walProcess.get_successful()) {
+                        const mode = lightMode ? 'light' : 'dark';
+                        print(`Wallpaper and colors set using wal (${mode} mode): ${fileName}`);
 
-                this.showSuccess(`Wallpaper set successfully!\n${fileName} (${mode} mode)`);
-            } else {
-                this.showError(`Error running wal: ${walStderr}`);
-            }
+                        // Generate templates
+                        this.generateTemplates();
+
+                        this.showSuccess(`Wallpaper set successfully!\n${fileName} (${mode} mode)`);
+                    } else {
+                        this.showError(`Error running wal: ${walStderr}`);
+                    }
+                } catch (error) {
+                    spinnerDialog.destroy();
+                    this.showError(`Error: ${error.message}`);
+                }
+            });
 
         } catch (error) {
             this.showError(`Error: ${error.message}`);
         }
+    }
+
+    showSpinnerDialog() {
+        // Create spinner dialog
+        const dialog = new Adw.MessageDialog({
+            transient_for: this.get_active_window(),
+            modal: true,
+            heading: 'Processing...',
+            body: 'Generating colors with pywal...'
+        });
+
+        // Create spinner
+        const spinner = new Gtk.Spinner({
+            spinning: true,
+            width_request: 32,
+            height_request: 32,
+            margin_top: 12,
+            margin_bottom: 12
+        });
+
+        // Add spinner to dialog
+        const box = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 12
+        });
+        box.append(spinner);
+        dialog.set_extra_child(box);
+
+        dialog.present();
+        return dialog;
     }
 
     generateTemplates() {
