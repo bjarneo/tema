@@ -315,7 +315,7 @@ class TemaApp extends Adw.Application {
             const spinnerDialog = this.showSpinnerDialog();
 
             // Run wal command asynchronously with proper environment
-            const walArgs = lightMode ? [walPath, '-l', '-i', imagePath] : [walPath, '-i', imagePath];
+            const walArgs = lightMode ? [walPath, '-n', '-l', '-i', imagePath] : [walPath, '-n', '-i', imagePath];
 
             // Set up environment variables for wal
             const launcher = new Gio.SubprocessLauncher({
