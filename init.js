@@ -151,14 +151,6 @@ class TemaApp extends Adw.Application {
             height_request: 128
         });
 
-        // Create label for filename
-        const label = new Gtk.Label({
-            label: fileName,
-            ellipsize: 3, // PANGO_ELLIPSIZE_END
-            max_width_chars: 15,
-            margin_top: 6
-        });
-
         // Create container box
         const box = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
@@ -170,7 +162,6 @@ class TemaApp extends Adw.Application {
         });
 
         box.append(spinner);
-        box.append(label);
 
         // Store the file path in the box for later use
         box._filePath = filePath;
@@ -258,8 +249,8 @@ class TemaApp extends Adw.Application {
             body: `Set wallpaper: ${fileName}`
         });
 
-        dialog.add_response('dark', '🌙 Dark Mode');
-        dialog.add_response('light', '☀️ Light Mode');
+        dialog.add_response('dark', 'Dark Mode');
+        dialog.add_response('light', 'Light Mode');
         dialog.add_response('cancel', 'Cancel');
 
         dialog.set_response_appearance('dark', Adw.ResponseAppearance.SUGGESTED);
