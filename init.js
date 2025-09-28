@@ -24,17 +24,11 @@ class TemaApp extends Adw.Application {
             default_height: 600
         });
 
-        // Create header bar
-        const headerBar = new Adw.HeaderBar();
-        headerBar.set_title_widget(new Gtk.Label({ label: 'Tēma' }));
-
         // Create main content
         const mainBox = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
             spacing: 0
         });
-
-        mainBox.append(headerBar);
 
         // Create scrolled window for the grid
         const scrolled = new Gtk.ScrolledWindow({
