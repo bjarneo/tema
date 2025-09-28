@@ -270,34 +270,311 @@ class TemaApp extends Adw.Application {
 
     generateTemplates() {
         try {
-            // Get the directory where the script is located
-            const scriptDir = GLib.path_get_dirname(GLib.get_current_dir() + '/init.js');
-            const templateScript = scriptDir + '/pywal-templates.sh';
+            print('Generating templates with pywal colors...');
 
-            // Check if template script exists
-            const scriptFile = Gio.File.new_for_path(templateScript);
-            if (!scriptFile.query_exists(null)) {
-                print('Template script not found:', templateScript);
+            // Get colors from pywal
+            const colors = this.readPywalColors();
+            if (!colors) {
+                print('Error: Could not read pywal colors');
                 return;
             }
 
-            // Run template generation script
-            const templateProcess = new Gio.Subprocess({
-                argv: [templateScript],
-                flags: Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
-            });
-            templateProcess.init(null);
+            const homeDir = GLib.get_home_dir();
+            const configBase = homeDir + '/.config';
+            const templatesDir = GLib.get_current_dir() + '/templates';
+            const temaThemeDir = configBase + '/omarchy/themes/tema';
 
-            const [, templateStdout, templateStderr] = templateProcess.communicate_utf8(null, null);
+            // Template mappings: [template_file, standard_output, tema_output]
+            const templateMappings = [
+                ['alacritty.toml', configBase + '/alacritty/alacritty.toml', temaThemeDir + '/alacritty.toml'],
+                ['waybar.css', configBase + '/waybar/colors.css', temaThemeDir + '/waybar.css'],
+                ['hyprland.conf', configBase + '/hypr/colors.conf', temaThemeDir + '/hyprland.conf'],
+                ['mako.ini', configBase + '/mako/config', temaThemeDir + '/mako.ini'],
+                ['ghostty.conf', configBase + '/ghostty/config', temaThemeDir + '/ghostty.conf'],
+                ['wofi.css', configBase + '/wofi/colors.css', temaThemeDir + '/wofi.css']
+            ];
 
-            if (templateProcess.get_successful()) {
-                print('Templates generated successfully');
-            } else {
-                print('Error generating templates:', templateStderr);
+            // Process each template
+            for (const [templateName, standardOutput, temaOutput] of templateMappings) {
+                const templateFile = Gio.File.new_for_path(templatesDir + '/' + templateName);
+                if (templateFile.query_exists(null)) {
+                    this.processTemplate(templateFile.get_path(), standardOutput, colors);
+                    this.processTemplate(templateFile.get_path(), temaOutput, colors);
+                }
             }
 
+            // Handle light mode detection and file creation
+            this.handleLightMode(colors, temaThemeDir);
+
+            // Symlink wallpapers to backgrounds
+            this.symlinkWallpapers(homeDir, temaThemeDir);
+
+            // Apply the tema theme with Omarchy first
+            this.applyOmarchyTheme();
+
+            // Set current wallpaper as Omarchy background AFTER theme is applied
+            this.setOmarchyBackground(colors, configBase);
+
+            print('✓ Template generation complete!');
+
         } catch (error) {
-            print('Error running template generation:', error.message);
+            print('Error in template generation:', error.message);
+        }
+    }
+
+    readPywalColors() {
+        try {
+            const colorsFile = Gio.File.new_for_path(GLib.get_home_dir() + '/.cache/wal/colors.json');
+            if (!colorsFile.query_exists(null)) {
+                return null;
+            }
+
+            const [success, content] = colorsFile.load_contents(null);
+            if (!success) {
+                return null;
+            }
+
+            const decoder = new TextDecoder('utf-8');
+            const jsonContent = decoder.decode(content);
+            const data = JSON.parse(jsonContent);
+
+            const colors = {
+                background: data.special.background,
+                foreground: data.special.foreground,
+                cursor: data.special.cursor,
+                wallpaper: data.wallpaper
+            };
+
+            for (let i = 0; i < 16; i++) {
+                colors[`color${i}`] = data.colors[`color${i}`];
+            }
+
+            return colors;
+        } catch (error) {
+            print('Error reading pywal colors:', error.message);
+            return null;
+        }
+    }
+
+    processTemplate(templatePath, outputPath, colors) {
+        try {
+            const templateFile = Gio.File.new_for_path(templatePath);
+            const [success, content] = templateFile.load_contents(null);
+            if (!success) {
+                print('Error reading template:', templatePath);
+                return;
+            }
+
+            const decoder = new TextDecoder('utf-8');
+            let templateContent = decoder.decode(content);
+
+            // Replace color variables
+            for (const [key, value] of Object.entries(colors)) {
+                // Handle .strip for removing # from hex colors
+                templateContent = templateContent.replace(
+                    new RegExp(`\\{${key}\\.strip\\}`, 'g'),
+                    value.replace('#', '')
+                );
+                templateContent = templateContent.replace(
+                    new RegExp(`\\{${key}\\}`, 'g'),
+                    value
+                );
+            }
+
+            // Create output directory if it doesn't exist
+            const outputFile = Gio.File.new_for_path(outputPath);
+            const outputDir = outputFile.get_parent();
+            if (!outputDir.query_exists(null)) {
+                outputDir.make_directory_with_parents(null);
+            }
+
+            // Write processed content
+            const encoder = new TextEncoder('utf-8');
+            const encodedContent = encoder.encode(templateContent);
+            outputFile.replace_contents(encodedContent, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+
+            print('✓ Generated:', outputPath);
+        } catch (error) {
+            print('Error processing template:', templatePath, error.message);
+        }
+    }
+
+    handleLightMode(colors, temaThemeDir) {
+        try {
+            // Calculate luminance to detect light mode
+            const bg = colors.background;
+            const r = parseInt(bg.substring(1, 3), 16);
+            const g = parseInt(bg.substring(3, 5), 16);
+            const b = parseInt(bg.substring(5, 7), 16);
+            const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+            const lightModeFile = Gio.File.new_for_path(temaThemeDir + '/light.mode');
+
+            if (luminance > 0.5) {
+                // Light mode - create file
+                lightModeFile.create(Gio.FileCreateFlags.NONE, null);
+                print('✓ Light mode detected - created light.mode file');
+            } else {
+                // Dark mode - remove file if it exists
+                if (lightModeFile.query_exists(null)) {
+                    lightModeFile.delete(null);
+                    print('✓ Dark mode detected - removed light.mode file');
+                }
+            }
+        } catch (error) {
+            print('Error handling light mode:', error.message);
+        }
+    }
+
+    symlinkWallpapers(homeDir, temaThemeDir) {
+        try {
+            const wallpapersDir = homeDir + '/Wallpapers';
+            const backgroundsDir = temaThemeDir + '/backgrounds';
+
+            const wallpapersFile = Gio.File.new_for_path(wallpapersDir);
+            const backgroundsFile = Gio.File.new_for_path(backgroundsDir);
+
+            if (wallpapersFile.query_exists(null)) {
+                // Remove existing backgrounds directory/symlink if it exists
+                if (backgroundsFile.query_exists(null)) {
+                    if (backgroundsFile.query_file_type(Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null) === Gio.FileType.SYMBOLIC_LINK) {
+                        backgroundsFile.delete(null);
+                    } else {
+                        // Remove directory recursively (simplified)
+                        const deleteProcess = new Gio.Subprocess({
+                            argv: ['rm', '-rf', backgroundsDir],
+                            flags: Gio.SubprocessFlags.NONE
+                        });
+                        deleteProcess.init(null);
+                        deleteProcess.wait(null);
+                    }
+                }
+
+                // Create symlink
+                backgroundsFile.make_symbolic_link(wallpapersDir, null);
+                print('✓ Symlinked', wallpapersDir, 'to', backgroundsDir);
+            } else {
+                print('Warning:', wallpapersDir, 'directory not found');
+            }
+        } catch (error) {
+            print('Error symlinking wallpapers:', error.message);
+        }
+    }
+
+    setOmarchyBackground(colors, configBase) {
+        try {
+            if (!colors.wallpaper) {
+                print('Warning: Could not determine current wallpaper from pywal');
+                return;
+            }
+
+            const wallpaperFile = Gio.File.new_for_path(colors.wallpaper);
+            if (!wallpaperFile.query_exists(null)) {
+                print('Warning: Wallpaper file does not exist:', colors.wallpaper);
+                return;
+            }
+
+            // Validate that this is actually an image file
+            if (!this.isImageFile(colors.wallpaper)) {
+                print('Warning: File is not a recognized image format:', colors.wallpaper);
+                return;
+            }
+
+            const backgroundLink = configBase + '/omarchy/current/background';
+            const backgroundFile = Gio.File.new_for_path(backgroundLink);
+
+            // Remove existing symlink if it exists
+            if (backgroundFile.query_exists(null)) {
+                backgroundFile.delete(null);
+            }
+
+            // Create new symlink to the actual image file
+            backgroundFile.make_symbolic_link(colors.wallpaper, null);
+            print('✓ Set background symlink:', colors.wallpaper);
+
+            // Restart swaybg if running
+            this.restartSwaybg(backgroundLink);
+
+        } catch (error) {
+            print('Error setting Omarchy background:', error.message);
+        }
+    }
+
+    restartSwaybg(backgroundLink) {
+        try {
+            // Check if swaybg is running
+            const checkProcess = new Gio.Subprocess({
+                argv: ['pgrep', '-x', 'swaybg'],
+                flags: Gio.SubprocessFlags.STDOUT_PIPE
+            });
+            checkProcess.init(null);
+            const [, stdout] = checkProcess.communicate_utf8(null, null);
+
+            if (checkProcess.get_successful() && stdout.trim()) {
+                // Kill existing swaybg
+                const killProcess = new Gio.Subprocess({
+                    argv: ['pkill', '-x', 'swaybg'],
+                    flags: Gio.SubprocessFlags.NONE
+                });
+                killProcess.init(null);
+                killProcess.wait(null);
+
+                // Start new swaybg
+                const startArgs = ['swaybg', '-i', backgroundLink, '-m', 'fill'];
+
+                // Check if uwsm is available
+                const uwsmCheck = new Gio.Subprocess({
+                    argv: ['which', 'uwsm'],
+                    flags: Gio.SubprocessFlags.STDOUT_PIPE
+                });
+                uwsmCheck.init(null);
+                uwsmCheck.wait(null);
+
+                if (uwsmCheck.get_successful()) {
+                    startArgs.unshift('uwsm', 'app', '--');
+                }
+
+                const startProcess = new Gio.Subprocess({
+                    argv: startArgs,
+                    flags: Gio.SubprocessFlags.NONE
+                });
+                startProcess.init(null);
+
+                print('✓ Restarted swaybg with new background');
+            }
+        } catch (error) {
+            print('Error restarting swaybg:', error.message);
+        }
+    }
+
+    applyOmarchyTheme() {
+        try {
+            // Check if omarchy-theme-set is available
+            const checkProcess = new Gio.Subprocess({
+                argv: ['which', 'omarchy-theme-set'],
+                flags: Gio.SubprocessFlags.STDOUT_PIPE
+            });
+            checkProcess.init(null);
+            checkProcess.wait(null);
+
+            if (checkProcess.get_successful()) {
+                const applyProcess = new Gio.Subprocess({
+                    argv: ['omarchy-theme-set', 'tema'],
+                    flags: Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
+                });
+                applyProcess.init(null);
+                const [, stdout, stderr] = applyProcess.communicate_utf8(null, null);
+
+                if (applyProcess.get_successful()) {
+                    print('✓ Omarchy tema theme applied!');
+                } else {
+                    print('Error applying Omarchy theme:', stderr);
+                }
+            } else {
+                print('Warning: omarchy-theme-set command not found');
+            }
+        } catch (error) {
+            print('Error applying Omarchy theme:', error.message);
         }
     }
 
