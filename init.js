@@ -254,6 +254,10 @@ class TemaApp extends Adw.Application {
             if (walProcess.get_successful()) {
                 const mode = lightMode ? 'light' : 'dark';
                 print(`Wallpaper and colors set using wal (${mode} mode): ${fileName}`);
+
+                // Generate templates
+                this.generateTemplates();
+
                 this.showSuccess(`Wallpaper set successfully!\n${fileName} (${mode} mode)`);
             } else {
                 this.showError(`Error running wal: ${walStderr}`);
@@ -261,6 +265,39 @@ class TemaApp extends Adw.Application {
 
         } catch (error) {
             this.showError(`Error: ${error.message}`);
+        }
+    }
+
+    generateTemplates() {
+        try {
+            // Get the directory where the script is located
+            const scriptDir = GLib.path_get_dirname(GLib.get_current_dir() + '/init.js');
+            const templateScript = scriptDir + '/pywal-templates.sh';
+
+            // Check if template script exists
+            const scriptFile = Gio.File.new_for_path(templateScript);
+            if (!scriptFile.query_exists(null)) {
+                print('Template script not found:', templateScript);
+                return;
+            }
+
+            // Run template generation script
+            const templateProcess = new Gio.Subprocess({
+                argv: [templateScript],
+                flags: Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
+            });
+            templateProcess.init(null);
+
+            const [, templateStdout, templateStderr] = templateProcess.communicate_utf8(null, null);
+
+            if (templateProcess.get_successful()) {
+                print('Templates generated successfully');
+            } else {
+                print('Error generating templates:', templateStderr);
+            }
+
+        } catch (error) {
+            print('Error running template generation:', error.message);
         }
     }
 
