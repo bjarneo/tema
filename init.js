@@ -221,30 +221,60 @@ class TemaApp extends Adw.Application {
 
     setWallpaper(imagePath, fileName, lightMode) {
         try {
-            // Check if wal is available
-            const subprocess = new Gio.Subprocess({
-                argv: ['which', 'wal'],
-                flags: Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
-            });
-            subprocess.init(null);
+            // Check if wal is available - try multiple locations
+            let walPath = null;
+            const possiblePaths = [
+                'wal',  // Try PATH first
+                '/usr/bin/wal',
+                '/usr/local/bin/wal',
+                GLib.get_home_dir() + '/.local/bin/wal',
+                '/bin/wal'
+            ];
 
-            const [, stdout, stderr] = subprocess.communicate_utf8(null, null);
+            for (const path of possiblePaths) {
+                try {
+                    const subprocess = new Gio.Subprocess({
+                        argv: ['test', '-x', path],
+                        flags: Gio.SubprocessFlags.NONE
+                    });
+                    subprocess.init(null);
+                    subprocess.wait(null);
 
-            if (!subprocess.get_successful()) {
-                this.showError('Error: wal not found. Please install pywal.');
+                    if (subprocess.get_successful()) {
+                        walPath = path;
+                        break;
+                    }
+                } catch (e) {
+                    // Continue to next path
+                }
+            }
+
+            if (!walPath) {
+                this.showError('Error: wal not found. Please install pywal.\nChecked paths: ' + possiblePaths.join(', '));
                 return;
             }
 
             // Show spinner dialog
             const spinnerDialog = this.showSpinnerDialog();
 
-            // Run wal command asynchronously
-            const walArgs = lightMode ? ['wal', '-l', '-i', imagePath] : ['wal', '-i', imagePath];
-            const walProcess = new Gio.Subprocess({
-                argv: walArgs,
+            // Run wal command asynchronously with proper environment
+            const walArgs = lightMode ? [walPath, '-l', '-i', imagePath] : [walPath, '-i', imagePath];
+
+            // Set up environment variables for wal
+            const launcher = new Gio.SubprocessLauncher({
                 flags: Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
             });
-            walProcess.init(null);
+
+            // Ensure HOME is set
+            launcher.setenv('HOME', GLib.get_home_dir(), true);
+            // Add .local/bin to PATH if not present
+            const currentPath = GLib.getenv('PATH') || '';
+            const localBin = GLib.get_home_dir() + '/.local/bin';
+            if (!currentPath.includes(localBin)) {
+                launcher.setenv('PATH', currentPath + ':' + localBin, true);
+            }
+
+            const walProcess = launcher.spawnv(walArgs);
 
             // Use async communication
             walProcess.communicate_utf8_async(null, null, (source, result) => {
@@ -319,9 +349,42 @@ class TemaApp extends Adw.Application {
 
             const homeDir = GLib.get_home_dir();
             const configBase = homeDir + '/.config';
-            const scriptDir = GLib.path_get_dirname(GLib.get_prgname() || import.meta.url.replace('file://', ''));
-            const templatesDir = scriptDir + '/templates';
+            // Find templates directory - try multiple locations
+            let templatesDir = null;
+            const possibleTemplateDirs = [
+                // If running from source directory
+                GLib.get_current_dir() + '/templates',
+                // If import.meta.url is available
+                typeof import.meta !== 'undefined' && import.meta.url ?
+                    GLib.path_get_dirname(import.meta.url.replace('file://', '')) + '/templates' : null,
+                // Common installation locations
+                '/usr/share/tema/templates',
+                '/usr/local/share/tema/templates',
+                GLib.get_home_dir() + '/.local/share/tema/templates',
+                // Look in Code directory
+                GLib.get_home_dir() + '/Code/tema/templates'
+            ].filter(path => path !== null);
+
+            for (const dir of possibleTemplateDirs) {
+                const templatesDirFile = Gio.File.new_for_path(dir);
+                if (templatesDirFile.query_exists(null)) {
+                    templatesDir = dir;
+                    break;
+                }
+            }
+
             const temaThemeDir = configBase + '/omarchy/themes/tema';
+
+            // Debug output
+            print('Templates directory:', templatesDir);
+            print('Tema theme directory:', temaThemeDir);
+            print('Checked paths:', possibleTemplateDirs.join(', '));
+
+            // Check if templates directory was found
+            if (!templatesDir) {
+                this.showError(`Templates directory not found!\nChecked paths:\n${possibleTemplateDirs.join('\n')}`);
+                return;
+            }
 
             // Template mappings: [template_file, tema_output]
             const templateMappings = [
@@ -637,10 +700,40 @@ class TemaApp extends Adw.Application {
 
     showError(message) {
         print(`Error: ${message}`);
+
+        // Also show error dialog if we have a window
+        const window = this.get_active_window();
+        if (window) {
+            const dialog = new Adw.MessageDialog({
+                transient_for: window,
+                modal: true,
+                heading: 'Error',
+                body: message
+            });
+            dialog.add_response('ok', 'OK');
+            dialog.set_default_response('ok');
+            dialog.connect('response', () => dialog.destroy());
+            dialog.present();
+        }
     }
 
     showSuccess(message) {
         print(`Success: ${message}`);
+
+        // Also show success dialog if we have a window
+        const window = this.get_active_window();
+        if (window) {
+            const dialog = new Adw.MessageDialog({
+                transient_for: window,
+                modal: true,
+                heading: 'Success',
+                body: message
+            });
+            dialog.add_response('ok', 'OK');
+            dialog.set_default_response('ok');
+            dialog.connect('response', () => dialog.destroy());
+            dialog.present();
+        }
     }
 });
 
