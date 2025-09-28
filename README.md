@@ -100,6 +100,25 @@ sudo ln -s $(pwd)/init.js /usr/local/bin/tema
 tema
 ```
 
+## Omarchy Theme Integration
+
+Tēma is now integrated as an Omarchy theme! The templates are symlinked to `~/.config/omarchy/themes/tema`.
+
+### Using with Omarchy
+
+```bash
+# Set Tēma as your Omarchy theme
+omarchy-theme-set tema
+
+# The templates will use pywal variables and automatically update when you change wallpapers
+```
+
+When you set a wallpaper through Tēma, it will:
+1. Generate colors with pywal16
+2. Process all template files with the new colors
+3. Update both standard config locations AND the current Omarchy theme
+4. Apply the new theme system-wide
+
 ## Usage
 
 1. Launch the application
