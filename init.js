@@ -176,7 +176,137 @@ class TemaApp extends Adw.Application {
 
     loadThumbnailForPlaceholder(placeholder, filePath, fileName) {
         try {
-            // Load the image and create thumbnail
+            const thumbnailPath = this.getThumbnailPath(filePath);
+
+            // Check if cached thumbnail exists
+            const thumbnailFile = Gio.File.new_for_path(thumbnailPath);
+            if (thumbnailFile.query_exists(null)) {
+                // Load cached thumbnail
+                this.loadCachedThumbnail(placeholder, thumbnailPath);
+            } else {
+                // Generate new thumbnail
+                this.generateThumbnail(placeholder, filePath, thumbnailPath, fileName);
+            }
+
+        } catch (error) {
+            print(`Error loading image ${fileName}:`, error.message);
+            this.showThumbnailError(placeholder);
+        }
+    }
+
+    getThumbnailPath(filePath) {
+        const cacheDir = GLib.get_home_dir() + '/.cache/tema/thumbnails';
+
+        // Create a hash of the file path for the cache filename
+        const hash = this.hashString(filePath);
+        const fileExt = filePath.toLowerCase().split('.').pop();
+
+        return `${cacheDir}/${hash}.${fileExt}`;
+    }
+
+    hashString(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32-bit integer
+        }
+        return Math.abs(hash).toString(16);
+    }
+
+    ensureCacheDirectory() {
+        const cacheDir = GLib.get_home_dir() + '/.cache/tema/thumbnails';
+        const cacheDirFile = Gio.File.new_for_path(cacheDir);
+
+        if (!cacheDirFile.query_exists(null)) {
+            try {
+                cacheDirFile.make_directory_with_parents(null);
+                print('✓ Created thumbnail cache directory:', cacheDir);
+            } catch (error) {
+                print('Error creating cache directory:', error.message);
+                throw error;
+            }
+        }
+
+        return cacheDir;
+    }
+
+    generateThumbnail(placeholder, filePath, thumbnailPath, fileName) {
+        try {
+            // Ensure cache directory exists
+            this.ensureCacheDirectory();
+
+            // Check if ImageMagick is available
+            this.checkImageMagick((available) => {
+                if (available) {
+                    this.generateThumbnailWithImageMagick(placeholder, filePath, thumbnailPath);
+                } else {
+                    // Fallback to original method
+                    this.generateThumbnailFallback(placeholder, filePath, fileName);
+                }
+            });
+
+        } catch (error) {
+            print(`Error generating thumbnail for ${fileName}:`, error.message);
+            this.showThumbnailError(placeholder);
+        }
+    }
+
+    checkImageMagick(callback) {
+        try {
+            const subprocess = new Gio.Subprocess({
+                argv: ['which', 'convert'],
+                flags: Gio.SubprocessFlags.STDOUT_PIPE
+            });
+            subprocess.init(null);
+
+            subprocess.communicate_utf8_async(null, null, (source, result) => {
+                try {
+                    subprocess.communicate_utf8_finish(result);
+                    callback(subprocess.get_successful());
+                } catch (error) {
+                    callback(false);
+                }
+            });
+        } catch (error) {
+            callback(false);
+        }
+    }
+
+    generateThumbnailWithImageMagick(placeholder, filePath, thumbnailPath) {
+        try {
+            const subprocess = new Gio.Subprocess({
+                argv: ['convert', filePath, '-thumbnail', '128x128>', thumbnailPath],
+                flags: Gio.SubprocessFlags.STDERR_PIPE
+            });
+            subprocess.init(null);
+
+            subprocess.communicate_utf8_async(null, null, (source, result) => {
+                try {
+                    const [, , stderr] = subprocess.communicate_utf8_finish(result);
+
+                    if (subprocess.get_successful()) {
+                        // Load the generated thumbnail
+                        this.loadCachedThumbnail(placeholder, thumbnailPath);
+                    } else {
+                        print('ImageMagick error:', stderr);
+                        this.generateThumbnailFallback(placeholder, filePath, 'unknown');
+                    }
+                } catch (error) {
+                    print('Error with ImageMagick process:', error.message);
+                    this.generateThumbnailFallback(placeholder, filePath, 'unknown');
+                }
+            });
+
+        } catch (error) {
+            print('Error starting ImageMagick:', error.message);
+            this.generateThumbnailFallback(placeholder, filePath, 'unknown');
+        }
+    }
+
+    generateThumbnailFallback(placeholder, filePath, fileName) {
+        try {
+            // Original method - loads full image into memory
             const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
                 filePath,
                 128,
@@ -195,18 +325,41 @@ class TemaApp extends Adw.Application {
             placeholder.prepend(image);
 
         } catch (error) {
-            print(`Error loading image ${fileName}:`, error.message);
-            // Replace spinner with error icon
+            print(`Error in fallback thumbnail generation for ${fileName}:`, error.message);
+            this.showThumbnailError(placeholder);
+        }
+    }
+
+    loadCachedThumbnail(placeholder, thumbnailPath) {
+        try {
+            const pixbuf = GdkPixbuf.Pixbuf.new_from_file(thumbnailPath);
+
+            // Create image widget
+            const image = new Gtk.Picture();
+            image.set_pixbuf(pixbuf);
+            image.set_can_shrink(false);
+
+            // Replace spinner with image
             const spinner = placeholder._spinner;
             placeholder.remove(spinner);
+            placeholder.prepend(image);
 
-            const errorLabel = new Gtk.Label({
-                label: '❌',
-                width_request: 128,
-                height_request: 128
-            });
-            placeholder.prepend(errorLabel);
+        } catch (error) {
+            print('Error loading cached thumbnail:', error.message);
+            this.showThumbnailError(placeholder);
         }
+    }
+
+    showThumbnailError(placeholder) {
+        const spinner = placeholder._spinner;
+        placeholder.remove(spinner);
+
+        const errorLabel = new Gtk.Label({
+            label: '❌',
+            width_request: 128,
+            height_request: 128
+        });
+        placeholder.prepend(errorLabel);
     }
 
     isImageFile(fileName) {
