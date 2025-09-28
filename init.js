@@ -291,7 +291,11 @@ class TemaApp extends Adw.Application {
                 ['hyprland.conf', configBase + '/hypr/colors.conf', temaThemeDir + '/hyprland.conf'],
                 ['mako.ini', configBase + '/mako/config', temaThemeDir + '/mako.ini'],
                 ['ghostty.conf', configBase + '/ghostty/config', temaThemeDir + '/ghostty.conf'],
-                ['wofi.css', configBase + '/wofi/colors.css', temaThemeDir + '/wofi.css']
+                ['wofi.css', configBase + '/wofi/colors.css', temaThemeDir + '/wofi.css'],
+                ['btop.theme', configBase + '/btop/themes/tema.theme', temaThemeDir + '/btop.theme'],
+                ['swayosd.css', configBase + '/swayosd/style.css', temaThemeDir + '/swayosd.css'],
+                ['walker.css', configBase + '/walker/themes/tema.css', temaThemeDir + '/walker.css'],
+                ['hyprlock.conf', configBase + '/hypr/hyprlock.conf', temaThemeDir + '/hyprlock.conf']
             ];
 
             // Process each template
@@ -300,6 +304,21 @@ class TemaApp extends Adw.Application {
                 if (templateFile.query_exists(null)) {
                     this.processTemplate(templateFile.get_path(), standardOutput, colors);
                     this.processTemplate(templateFile.get_path(), temaOutput, colors);
+                }
+            }
+
+            // Copy static files (non-template files) to tema theme directory
+            const staticFiles = ['README.md', 'theme.png', 'neovim.lua', 'chromium.theme', 'icons.theme'];
+            for (const staticFile of staticFiles) {
+                const sourceFile = Gio.File.new_for_path(templatesDir + '/' + staticFile);
+                const destFile = Gio.File.new_for_path(temaThemeDir + '/' + staticFile);
+                if (sourceFile.query_exists(null)) {
+                    try {
+                        sourceFile.copy(destFile, Gio.FileCopyFlags.OVERWRITE, null, null);
+                        print('✓ Copied static file:', staticFile);
+                    } catch (error) {
+                        print('Warning: Could not copy', staticFile, ':', error.message);
+                    }
                 }
             }
 
