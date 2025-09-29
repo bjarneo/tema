@@ -444,44 +444,6 @@ class TemaApp extends Adw.Application {
                 return true;
             }
 
-            // Handle vim-style navigation (hjkl)
-            const selected = grid.get_selected_children();
-            if (selected.length > 0) {
-                const currentChild = selected[0];
-                const currentIndex = currentChild.get_index();
-
-                // Get all children using GTK4 API
-                const children = [];
-                let child = grid.get_first_child();
-                while (child) {
-                    children.push(child);
-                    child = child.get_next_sibling();
-                }
-
-                const maxChildrenPerLine = grid.max_children_per_line;
-                const totalChildren = children.length;
-
-                let newIndex = currentIndex;
-
-                switch (keyval) {
-                    case 104: // 'h' - left
-                        if (currentIndex > 0) {
-                            newIndex = currentIndex - 1;
-                        }
-                        break;
-                    case 108: // 'l' - right
-                        if (currentIndex < totalChildren - 1) {
-                            newIndex = currentIndex + 1;
-                        }
-                        break;
-                }
-
-                if (newIndex !== currentIndex && newIndex >= 0 && newIndex < totalChildren) {
-                    grid.unselect_all();
-                    grid.select_child(children[newIndex]);
-                    return true;
-                }
-            }
 
             // Handle help modal with '?' key
             if (keyval === 63) { // '?'
@@ -746,7 +708,7 @@ Enter/Double-click - Choose dark/light mode for selected wallpaper`
             }
 
             // Copy static files (non-template files) to tema theme directory
-            const staticFiles = ['README.md', 'theme.png', 'neovim.lua', 'chromium.theme', 'icons.theme'];
+            const staticFiles = ['README.md', 'theme.png', 'neovim.lua', 'chromium.theme'];
             for (const staticFile of staticFiles) {
                 const sourceFile = Gio.File.new_for_path(templatesDir + '/' + staticFile);
                 const destFile = Gio.File.new_for_path(temaThemeDir + '/' + staticFile);
