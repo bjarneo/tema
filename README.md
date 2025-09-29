@@ -23,51 +23,6 @@ Huge kudos to this amazing project - without their awesome work, Tēma wouldn't 
 - Thumbnail caching with ImageMagick support
 - Modular architecture for better maintainability
 
-## Dependencies (Arch Linux)
-
-Install the required packages using pacman:
-
-```bash
-# Core dependencies
-sudo pacman -S gjs gtk4 libadwaita
-
-# For image processing
-sudo pacman -S gdk-pixbuf2
-
-# For wallpaper and color scheme management
-sudo pacman -S python-pywal
-```
-
-## Setup
-
-1. Create the wallpapers directory if it doesn't exist:
-   ```bash
-   mkdir -p ~/Wallpapers
-   ```
-
-2. Add your wallpaper images to the `~/Wallpapers/` directory. Supported formats:
-   - JPG/JPEG
-   - PNG
-   - GIF
-   - BMP
-   - WebP
-   - TIFF
-
-## Running the Application
-
-Make the script executable and run it:
-
-```bash
-chmod +x init.js
-./init.js
-```
-
-Or run it directly with gjs:
-
-```bash
-gjs -m init.js
-```
-
 ## Installing as a Native App
 
 ### Option 1: AUR Package (Recommended for Arch Linux)
@@ -138,6 +93,51 @@ cp data/com.bjarneo.Tema.desktop ~/.local/share/applications/
 sed -i "s|Exec=tema|Exec=$(pwd)/init.js|" ~/.local/share/applications/com.bjarneo.Tema.desktop
 ```
 
+## Dependencies (Arch Linux)
+
+Install the required packages using pacman:
+
+```bash
+# Core dependencies
+sudo pacman -S gjs gtk4 libadwaita
+
+# For image processing
+sudo pacman -S gdk-pixbuf2
+
+# For wallpaper and color scheme management
+sudo pacman -S python-pywal
+```
+
+## Setup
+
+1. Create the wallpapers directory if it doesn't exist:
+   ```bash
+   mkdir -p ~/Wallpapers
+   ```
+
+2. Add your wallpaper images to the `~/Wallpapers/` directory. Supported formats:
+   - JPG/JPEG
+   - PNG
+   - GIF
+   - BMP
+   - WebP
+   - TIFF
+
+## Running the Application
+
+Make the script executable and run it:
+
+```bash
+chmod +x init.js
+./init.js
+```
+
+Or run it directly with gjs:
+
+```bash
+gjs -m init.js
+```
+
 ## Omarchy Theme Integration
 
 Tēma is now integrated as an Omarchy theme! The templates are symlinked to `~/.config/omarchy/themes/tema`.
@@ -185,50 +185,6 @@ When you set a wallpaper through Tēma, it will:
 - Check file permissions in `~/Wallpapers/`
 - Ensure image files have supported extensions
 - Install additional image format support if needed
-
-## Creating an AUR Package
-
-If you want to create and publish your own AUR package:
-
-### Prerequisites
-
-1. **Update the PKGBUILD**: Edit the `PKGBUILD` file and change:
-   - Repository URL to your actual GitHub repository
-   - Maintainer information at the top
-
-2. **Test the package locally**:
-   ```bash
-   # Install dependencies first
-   sudo pacman -S meson ninja gjs gtk4 libadwaita python-pywal
-
-   # Test build
-   makepkg -si
-   ```
-
-### Publishing to AUR
-
-1. **Set up AUR access** (if you haven't already):
-   ```bash
-   # Generate SSH key if you don't have one
-   ssh-keygen -t rsa -b 4096 -C "your.email@example.com"
-
-   # Add your public key to your AUR account at https://aur.archlinux.org/
-   ```
-
-2. **Clone and submit**:
-   ```bash
-   # Clone the AUR repository (replace with your package name)
-   git clone ssh://aur@aur.archlinux.org/tema-git.git aur-tema
-
-   # Copy packaging files
-   cp PKGBUILD .SRCINFO tema.install aur-tema/
-
-   # Submit to AUR
-   cd aur-tema
-   git add -A
-   git commit -m "Initial tema-git package"
-   git push
-   ```
 
 ### Package Structure
 
