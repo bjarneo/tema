@@ -1,10 +1,10 @@
 # Maintainer: Your Name <your.email@example.com>
 pkgname=tema-git
-pkgver=1.0.0.r0.g$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+pkgver=1.0.0.r19.g72a2e15
 pkgrel=1
 pkgdesc="A GTK4/Adwaita Omarchy theming application with pywal integration"
 arch=('any')
-url="https://github.com/yourusername/tema"
+url="https://github.com/bjarneo/tema"
 license=('MIT')
 depends=(
     'gjs>=1.66'
@@ -25,7 +25,7 @@ optdepends=(
 provides=('tema')
 conflicts=('tema')
 install=tema.install
-source=("git+https://github.com/yourusername/tema.git")
+source=("git+ssh://git@github.com/bjarneo/tema.git")
 sha256sums=('SKIP')
 
 pkgver() {
