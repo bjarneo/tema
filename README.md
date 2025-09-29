@@ -2,22 +2,26 @@
 
 A GTK4/Adwaita Omarchy theming application that integrates with pywal for automatic color scheme generation.
 
+> **⚠️ Important:** Tēma requires wallpapers to be placed in `~/Wallpapers/` directory to function. Create this directory and add your wallpaper images before running the application.
+
 ## 🙏 Acknowledgments
 
 This application is built on top of the incredible work by these amazing creators:
 
 - **[pywal](https://github.com/dylanaraps/pywal)** by [@dylanaraps](https://github.com/dylanaraps) - The original and foundational pywal that revolutionized automatic color scheme generation
-- **[pywal16](https://github.com/eylles/pywal16)** by [@eylles](https://github.com/eylles) - An enhanced fork providing 16-color support and additional features
 
-Huge kudos to both projects - without their awesome work, Tēma wouldn't exist! 🎨
+Huge kudos to this amazing project - without their awesome work, Tēma wouldn't exist! 🎨
 
 ## Features
 
 - Browse wallpapers from `~/Wallpapers/` directory
-- Grid-based thumbnail view
+- Grid-based thumbnail view with caching
 - Dark/Light mode wallpaper setting
 - Integration with pywal for automatic color scheme generation
 - Keyboard navigation support
+- Help dialog with keyboard shortcuts
+- Thumbnail caching with ImageMagick support
+- Modular architecture for better maintainability
 
 ## Dependencies (Arch Linux)
 
@@ -100,10 +104,17 @@ sudo meson install -C builddir
 ```
 
 This installs:
-- Main application to `/usr/local/share/tema/`
+- Main application bundle (GResource) to `/usr/local/share/tema/`
+- All JavaScript modules bundled in the GResource
 - Command line symlink at `/usr/local/bin/tema`
 - Desktop file for application launcher
 - Template files to `/usr/local/share/tema/templates/`
+
+The build process:
+1. Compiles all JavaScript modules into a GResource bundle
+2. Configures the entry point script with proper paths
+3. Creates symlinks for command-line access
+4. Installs templates and desktop integration files
 
 ### Option 3: Development Setup
 
@@ -141,7 +152,7 @@ omarchy-theme-set tema
 ```
 
 When you set a wallpaper through Tēma, it will:
-1. Generate colors with pywal16
+1. Generate colors with pywal
 2. Process all template files with the new colors
 3. Update both standard config locations AND the current Omarchy theme
 4. Apply the new theme system-wide
@@ -158,6 +169,8 @@ When you set a wallpaper through Tēma, it will:
 
 - **Arrow keys**: Navigate through wallpapers
 - **Enter**: Set the selected wallpaper
+- **?**: Show help dialog with keyboard shortcuts
+- **q** or **Escape**: Quit application
 - **Tab**: Move focus between UI elements
 
 ## Troubleshooting
@@ -222,10 +235,11 @@ If you want to create and publish your own AUR package:
 The AUR package follows the [GJS packaging specification](https://gjs.guide/guides/gtk/gtk4.html#packaging) and includes:
 
 - **Standard compliant structure**: Uses proper DBus naming (`com.bjarneo.Tema`)
-- **GResource bundling**: JavaScript code bundled for efficiency
+- **GResource bundling**: All JavaScript modules (main.js, ThumbnailManager.js, DialogManager.js, ThemeGenerator.js, WallpaperManager.js) bundled for efficiency
 - **Template installation**: Theme templates installed to `/usr/share/tema/templates/`
 - **Desktop integration**: Proper desktop file and symlinks
 - **Dependency management**: All runtime and build dependencies specified
+- **Modular architecture**: Separates concerns across multiple specialized modules
 
 ## Technical Details
 
@@ -234,3 +248,9 @@ The AUR package follows the [GJS packaging specification](https://gjs.guide/guid
 - Uses GdkPixbuf for image loading and thumbnail generation
 - Integrates with pywal for system-wide color scheme management
 - Follows the official GTK/GJS application packaging specification
+- Modular architecture with separation of concerns:
+  - `ThumbnailManager` - Handles image thumbnails and caching
+  - `WallpaperManager` - Manages wallpaper setting and pywal integration
+  - `DialogManager` - Handles all user interface dialogs
+  - `ThemeGenerator` - Processes templates and generates theme files
+  - `main.js` - Application entry point and UI coordination
