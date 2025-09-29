@@ -38,6 +38,7 @@ entry_point = configure_file(
     'PACKAGE_NAME': app_id,
     'PACKAGE_VERSION': meson.project_version(),
     'prefix': get_option('prefix'),
+    'datadir': get_option('datadir'),
   },
   install: true,
   install_dir: get_option('datadir') / package_name,
@@ -47,7 +48,7 @@ entry_point = configure_file(
 # Create symlink in bindir for command line usage
 install_symlink(
   package_tarname,
-  pointing_to: '/usr/share/' + package_name + '/' + app_id,
+  pointing_to: get_option('prefix') + '/' + get_option('datadir') + '/' + package_name + '/' + app_id,
   install_dir: get_option('bindir')
 )
 
