@@ -116,7 +116,7 @@ var ThumbnailManager = class ThumbnailManager {
 
         try {
             const subprocess = new Gio.Subprocess({
-                argv: ['which', 'convert'],
+                argv: ['which', 'magick'],
                 flags: Gio.SubprocessFlags.STDOUT_PIPE
             });
             subprocess.init(null);
@@ -157,7 +157,7 @@ var ThumbnailManager = class ThumbnailManager {
     generateThumbnailWithImageMagick(placeholder, filePath, thumbnailPath) {
         try {
             const subprocess = new Gio.Subprocess({
-                argv: ['convert', filePath, '-thumbnail', '128x128>', thumbnailPath],
+                argv: ['magick', filePath, '-thumbnail', '128x128>', thumbnailPath],
                 flags: Gio.SubprocessFlags.STDERR_PIPE
             });
             subprocess.init(null);
