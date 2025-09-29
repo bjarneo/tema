@@ -140,18 +140,34 @@ Or run it directly with gjs:
 gjs -m init.js
 ```
 
-## Omarchy Theme Integration
+## Omarchy Integration
 
 Tēma is now integrated as an Omarchy theme! The templates are symlinked to `~/.config/omarchy/themes/tema`.
 
-### Using with Omarchy
+### Setup with Omarchy
 
 ```bash
 # Set Tēma as your Omarchy theme
 omarchy-theme-set tema
 
+# Copy existing wallpapers from Omarchy themes to get started
+cp ~/.config/omarchy/themes/**/backgrounds/* ~/Wallpapers/
+
 # The templates will use pywal variables and automatically update when you change wallpapers
 ```
+
+### Recommended Keybind
+
+Add this keybind to your Hyprland configuration to quickly launch Tēma:
+
+`~/.config/hypr/bindings.conf`
+```bash
+bindd = SUPER SHIFT, T, Tema, exec, uwsm app -- tema
+```
+
+This allows you to press `Super + Shift + T` to open the wallpaper selector.
+
+### How it Works
 
 When you set a wallpaper through Tēma, it will:
 1. Generate colors with pywal
