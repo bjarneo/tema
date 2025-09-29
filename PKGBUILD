@@ -2,7 +2,7 @@
 pkgname=tema-git
 pkgver=1.0.0.r0.g$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 pkgrel=1
-pkgdesc="A GTK4/Adwaita wallpaper viewer application with pywal integration"
+pkgdesc="A GTK4/Adwaita Omarchy theming application with pywal integration"
 arch=('any')
 url="https://github.com/yourusername/tema"
 license=('MIT')

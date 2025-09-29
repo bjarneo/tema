@@ -2,7 +2,7 @@
 Version=1.0
 Type=Application
 Name=Tēma
-Comment=Wallpaper Viewer with pywal integration
+Comment=Omarchy theming with pywal integration
 Exec=tema
 Icon=preferences-desktop-wallpaper
 Terminal=false

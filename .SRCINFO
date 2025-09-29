@@ -1,6 +1,6 @@
 pkgbase = tema-git
-	pkgdesc = A GTK4/Adwaita wallpaper viewer application with pywal integration
-	pkgver = 1.0.0.r0.gdbf5801
+	pkgdesc = A GTK4/Adwaita Omarchy theming application with pywal integration
+	pkgver = 1.0.0.r0.gd371b6b
 	pkgrel = 1
 	url = https://github.com/yourusername/tema
 	install = tema.install

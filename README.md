@@ -1,6 +1,6 @@
-# Tēma - Wallpaper Viewer
+# Tēma - Omarchy Theming
 
-A GTK4/Adwaita wallpaper viewer application that integrates with pywal for automatic color scheme generation.
+A GTK4/Adwaita Omarchy theming application that integrates with pywal for automatic color scheme generation.
 
 ## 🙏 Acknowledgments
 
