@@ -145,11 +145,7 @@ gjs -m init.js
 Tēma is now integrated as an Omarchy theme! The templates are symlinked to `~/.config/omarchy/themes/tema`.
 
 ### Setup with Omarchy
-
 ```bash
-# Set Tēma as your Omarchy theme
-omarchy-theme-set tema
-
 # Copy existing wallpapers from Omarchy themes to get started
 cp ~/.config/omarchy/themes/**/backgrounds/* ~/Wallpapers/
 
