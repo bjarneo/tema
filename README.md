@@ -104,11 +104,11 @@ sudo meson install -C builddir
 ```
 
 This installs:
-- Main application bundle (GResource) to `/usr/local/share/tema/`
+- Main application bundle (GResource) to `/usr/share/tema/`
 - All JavaScript modules bundled in the GResource
-- Command line symlink at `/usr/local/bin/tema`
+- Command line symlink at `/usr/bin/tema`
 - Desktop file for application launcher
-- Template files to `/usr/local/share/tema/templates/`
+- Template files to `/usr/share/tema/templates/`
 
 The build process:
 1. Compiles all JavaScript modules into a GResource bundle
