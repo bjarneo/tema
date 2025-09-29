@@ -9,6 +9,11 @@ project('tema',
 
 gnome = import('gnome')
 
+# Print installation location for user reference
+message('Installation prefix: ' + get_option('prefix'))
+message('Binary will be installed to: ' + get_option('prefix') / get_option('bindir'))
+message('Data will be installed to: ' + get_option('prefix') / get_option('datadir') / 'tema')
+
 # Package configuration
 package_name = 'tema'
 package_tarname = 'tema'
