@@ -1,0 +1,56 @@
+/* Remove border radius for selected images */
+flowboxchild:selected {
+    border-radius: 0;
+}
+
+flowboxchild:selected > box {
+    border-radius: 0;
+}
+
+/* Remove border radius for modal dialogs */
+messagedialog {
+    border-radius: 0;
+}
+
+window.dialog {
+    border-radius: 0;
+}
+
+window.messagedialog {
+    border-radius: 0;
+}
+
+.dialog-content-area {
+    border-radius: 0;
+}
+
+/* Remove border radius for buttons */
+button {
+    border-radius: 0;
+}
+
+.suggested-action {
+    border-radius: 0;
+}
+
+.destructive-action {
+    border-radius: 0;
+}
+
+/* Remove border radius for dialog buttons */
+.dialog-action-area button {
+    border-radius: 0;
+}
+
+/* Remove border radius for all Adwaita message dialog components */
+.message-dialog {
+    border-radius: 0;
+}
+
+.message-dialog .dialog-action-area {
+    border-radius: 0;
+}
+
+.message-dialog button {
+    border-radius: 0;
+}

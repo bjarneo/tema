@@ -1,7 +1,7 @@
 imports.gi.versions.Gtk = '4.0';
 imports.gi.versions.Adw = '1';
 
-const { Gtk, Adw, GLib, GObject, Gio } = imports.gi;
+const { Gtk, Adw, GLib, GObject, Gio, Gdk } = imports.gi;
 
 // Detect if we're running in development mode or packaged mode
 let ThumbnailManager, DialogManager, ThemeGenerator, WallpaperManager;
@@ -39,6 +39,8 @@ class TemaApp extends Adw.Application {
     }
 
     vfunc_activate() {
+        this.loadCustomCSS();
+
         const window = this.createMainWindow();
         const mainBox = this.createMainContent();
         const { scrolled, grid } = this.createImageGrid();
@@ -49,6 +51,39 @@ class TemaApp extends Adw.Application {
 
         window.set_content(mainBox);
         window.present();
+    }
+
+    loadCustomCSS() {
+        const cssProvider = new Gtk.CssProvider();
+        try {
+            // Try loading from gresource first (packaged mode)
+            try {
+                cssProvider.load_from_resource('/com/bjarneo/Tema/js/style.css');
+                Gtk.StyleContext.add_provider_for_display(
+                    Gdk.Display.get_default(),
+                    cssProvider,
+                    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+                );
+                print('✓ Custom CSS loaded from gresource');
+                return;
+            } catch (e) {
+                // Fall back to file path for development mode
+                let cssPath = GLib.get_current_dir() + '/src/style.css';
+                let cssFile = Gio.File.new_for_path(cssPath);
+
+                if (cssFile.query_exists(null)) {
+                    cssProvider.load_from_file(cssFile);
+                    Gtk.StyleContext.add_provider_for_display(
+                        Gdk.Display.get_default(),
+                        cssProvider,
+                        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+                    );
+                    print('✓ Custom CSS loaded from file');
+                }
+            }
+        } catch (error) {
+            print('Note: Custom CSS not loaded:', error.message);
+        }
     }
 
     createMainWindow() {
