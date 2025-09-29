@@ -73,3 +73,9 @@ install_subdir('templates',
   install_dir: get_option('datadir') / package_name,
   strip_directory: false
 )
+
+# Install icon
+install_data('icon.png',
+  rename: app_id + '.png',
+  install_dir: get_option('datadir') / 'icons' / 'hicolor' / 'scalable' / 'apps'
+)
