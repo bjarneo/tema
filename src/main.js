@@ -3,10 +3,10 @@ imports.gi.versions.Adw = '1';
 
 const { Gtk, Adw, GLib, GObject, Gio } = imports.gi;
 
-const { ThumbnailManager } = imports.src.ThumbnailManager;
-const { DialogManager } = imports.src.DialogManager;
-const { ThemeGenerator } = imports.src.ThemeGenerator;
-const { WallpaperManager } = imports.src.WallpaperManager;
+const { ThumbnailManager } = imports.ThumbnailManager;
+const { DialogManager } = imports.DialogManager;
+const { ThemeGenerator } = imports.ThemeGenerator;
+const { WallpaperManager } = imports.WallpaperManager;
 
 const APP_ID = 'com.bjarneo.Tema';
 
