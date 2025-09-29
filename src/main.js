@@ -489,6 +489,12 @@ class TemaApp extends Adw.Application {
                 return true;
             }
 
+            // Handle quit with 'q' key or Escape
+            if (keyval === 113 || keyval === 65307) { // 'q' or Escape
+                window.close();
+                return true;
+            }
+
             return false;
         });
 
@@ -510,6 +516,9 @@ Tab - Move focus between UI elements
 
 Help:
 ? - Show this help dialog
+
+Application:
+q, Esc - Quit application
 
 Setting Wallpapers:
 Enter/Double-click - Choose dark/light mode for selected wallpaper`
