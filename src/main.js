@@ -173,12 +173,40 @@ class TemaApp extends Adw.Application {
     }
 
     createPlaceholder(grid, filePath, fileName) {
-        // Create placeholder with spinner
-        const spinner = new Gtk.Spinner({
-            spinning: true,
-            width_request: 128,
-            height_request: 128
-        });
+        // Create placeholder with image from omarchy.org
+        let placeholderWidget;
+
+        try {
+            // Try to load the placeholder image
+            const placeholderPath = GLib.get_current_dir() + '/placeholder.png';
+            const placeholderFile = Gio.File.new_for_path(placeholderPath);
+
+            if (placeholderFile.query_exists(null)) {
+                const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
+                    placeholderPath,
+                    128,
+                    128,
+                    true
+                );
+                placeholderWidget = new Gtk.Picture();
+                placeholderWidget.set_pixbuf(pixbuf);
+                placeholderWidget.set_can_shrink(false);
+            } else {
+                // Fallback to spinner if placeholder image not found
+                placeholderWidget = new Gtk.Spinner({
+                    spinning: true,
+                    width_request: 128,
+                    height_request: 128
+                });
+            }
+        } catch (error) {
+            // Fallback to spinner on any error
+            placeholderWidget = new Gtk.Spinner({
+                spinning: true,
+                width_request: 128,
+                height_request: 128
+            });
+        }
 
         // Create container box
         const box = new Gtk.Box({
@@ -190,12 +218,12 @@ class TemaApp extends Adw.Application {
             margin_end: 6
         });
 
-        box.append(spinner);
+        box.append(placeholderWidget);
 
         // Store the file path in the box for later use
         box._filePath = filePath;
         box._fileName = fileName;
-        box._spinner = spinner;
+        box._placeholderWidget = placeholderWidget;
 
         // Add to grid
         grid.append(box);
@@ -348,9 +376,9 @@ class TemaApp extends Adw.Application {
             image.set_pixbuf(pixbuf);
             image.set_can_shrink(false);
 
-            // Replace spinner with image
-            const spinner = placeholder._spinner;
-            placeholder.remove(spinner);
+            // Replace placeholder with image
+            const placeholderWidget = placeholder._placeholderWidget;
+            placeholder.remove(placeholderWidget);
             placeholder.prepend(image);
 
         } catch (error) {
@@ -368,9 +396,9 @@ class TemaApp extends Adw.Application {
             image.set_pixbuf(pixbuf);
             image.set_can_shrink(false);
 
-            // Replace spinner with image
-            const spinner = placeholder._spinner;
-            placeholder.remove(spinner);
+            // Replace placeholder with image
+            const placeholderWidget = placeholder._placeholderWidget;
+            placeholder.remove(placeholderWidget);
             placeholder.prepend(image);
 
         } catch (error) {
@@ -380,8 +408,8 @@ class TemaApp extends Adw.Application {
     }
 
     showThumbnailError(placeholder) {
-        const spinner = placeholder._spinner;
-        placeholder.remove(spinner);
+        const placeholderWidget = placeholder._placeholderWidget;
+        placeholder.remove(placeholderWidget);
 
         const errorLabel = new Gtk.Label({
             label: '❌',
