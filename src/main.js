@@ -471,7 +471,6 @@ class TemaApp extends Adw.Application {
             modal: true,
             heading: 'Keyboard Shortcuts',
             body: `Navigation:
-h, l - Vim-style navigation (left, right)
 Arrow keys - Navigate through wallpapers
 Enter - Set selected wallpaper
 Tab - Move focus between UI elements
