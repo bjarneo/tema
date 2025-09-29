@@ -549,7 +549,6 @@ class TemaApp extends Adw.Application {
                         // Generate templates
                         this.generateTemplates();
 
-                        this.showSuccess(`Wallpaper set successfully!\n${fileName} (${mode} mode)`);
                     } else {
                         this.showError(`Error running wal: ${walStderr}`);
                     }
