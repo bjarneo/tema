@@ -27,6 +27,7 @@ yay -S tema-git
 - Grid-based thumbnail view with caching
 - Dark/Light mode wallpaper setting
 - Integration with pywal for automatic color scheme generation
+- **Theme ejection** - Export any wallpaper as a standalone Omarchy theme
 - Keyboard navigation support
 - Help dialog with keyboard shortcuts
 - Thumbnail caching with ImageMagick support
@@ -169,10 +170,27 @@ When you set a wallpaper through Tēma, it will:
 4. Choose between Dark Mode (🌙) or Light Mode (☀️)
 5. The wallpaper will be set and pywal will generate a matching color scheme
 
+### Theme Ejection
+
+You can eject any wallpaper as a standalone Omarchy theme:
+
+1. Select a wallpaper in the grid view
+2. Press **e** to eject the theme
+3. Choose between Dark Mode or Light Mode
+4. Enter the output path (defaults to `~/omarchy-<wallpaper-name>-theme`)
+5. The theme will be created with:
+   - All processed template files (alacritty, waybar, hyprland, mako, ghostty, wofi, btop, swayosd, walker, hyprlock)
+   - The wallpaper as `background.<ext>`
+   - A `light.mode` file if light mode was selected
+   - All static files (README.md, theme.png, neovim.lua, chromium.theme)
+
+This creates a complete, shareable theme package that can be used with Omarchy or distributed to others.
+
 ## Keyboard Navigation
 
 - **Arrow keys**: Navigate through wallpapers
 - **Enter**: Set the selected wallpaper
+- **e**: Eject selected wallpaper as a standalone theme
 - **?**: Show help dialog with keyboard shortcuts
 - **q** or **Escape**: Quit application
 - **Tab**: Move focus between UI elements
