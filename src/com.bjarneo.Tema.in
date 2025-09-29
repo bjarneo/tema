@@ -4,4 +4,6 @@ imports.package.init({
     version: "@PACKAGE_VERSION@",
     prefix: "@prefix@"
 });
-imports.package.run('main');
+
+const { main } = imports['main'];
+main(ARGV);
