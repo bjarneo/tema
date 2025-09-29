@@ -303,4 +303,134 @@ var ThemeGenerator = class ThemeGenerator {
         const lowerFileName = fileName.toLowerCase();
         return imageExtensions.some(ext => lowerFileName.endsWith(ext));
     }
+
+    ejectTheme(imagePath, fileName, lightMode, outputPath) {
+        try {
+            print(`Ejecting theme to: ${outputPath}`);
+
+            // First, run wal to generate colors
+            const walPath = this.app.wallpaperManager.findWalExecutable();
+            if (!walPath) {
+                this.app.showError('Error: wal not found. Please install pywal.');
+                return;
+            }
+
+            const spinnerDialog = this.showEjectionSpinner();
+            this.runWalAndEject(walPath, imagePath, lightMode, outputPath, fileName, spinnerDialog);
+        } catch (error) {
+            this.app.showError(`Error ejecting theme: ${error.message}`);
+        }
+    }
+
+    runWalAndEject(walPath, imagePath, lightMode, outputPath, fileName, spinnerDialog) {
+        try {
+            const walArgs = lightMode ? [walPath, '-n', '-l', '-i', imagePath] : [walPath, '-n', '-i', imagePath];
+
+            const launcher = new Gio.SubprocessLauncher({
+                flags: Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
+            });
+
+            launcher.setenv('HOME', GLib.get_home_dir(), true);
+            const currentPath = GLib.getenv('PATH') || '';
+            const localBin = GLib.get_home_dir() + '/.local/bin';
+            if (!currentPath.includes(localBin)) {
+                launcher.setenv('PATH', currentPath + ':' + localBin, true);
+            }
+
+            const walProcess = launcher.spawnv(walArgs);
+
+            walProcess.communicate_utf8_async(null, null, (source, result) => {
+                try {
+                    const [, walStdout, walStderr] = walProcess.communicate_utf8_finish(result);
+
+                    if (walProcess.get_successful()) {
+                        const colors = this.readPywalColors();
+                        if (colors) {
+                            this.createEjectedTheme(outputPath, colors, imagePath, spinnerDialog);
+                        } else {
+                            spinnerDialog.destroy();
+                            this.app.showError('Error: Could not read pywal colors');
+                        }
+                    } else {
+                        spinnerDialog.destroy();
+                        this.app.showError(`Error running wal: ${walStderr}`);
+                    }
+                } catch (error) {
+                    spinnerDialog.destroy();
+                    this.app.showError(`Error: ${error.message}`);
+                }
+            });
+        } catch (error) {
+            spinnerDialog.destroy();
+            this.app.showError(`Error: ${error.message}`);
+        }
+    }
+
+    createEjectedTheme(outputPath, colors, imagePath, spinnerDialog) {
+        try {
+            // Create output directory
+            const outputDir = Gio.File.new_for_path(outputPath);
+            if (!outputDir.query_exists(null)) {
+                outputDir.make_directory_with_parents(null);
+            }
+
+            const templatesDir = this.findTemplatesDirectory();
+            if (!templatesDir) {
+                spinnerDialog.destroy();
+                this.app.showError('Templates directory not found!');
+                return;
+            }
+
+            // Process all templates to the output directory
+            this.processTemplates(templatesDir, outputPath, colors);
+            this.copyStaticFiles(templatesDir, outputPath);
+            this.handleLightMode(colors, outputPath);
+
+            // Copy the wallpaper to the theme directory
+            const wallpaperFile = Gio.File.new_for_path(imagePath);
+            const wallpaperName = wallpaperFile.get_basename();
+            const destWallpaper = Gio.File.new_for_path(outputPath + '/background' + this.getFileExtension(wallpaperName));
+            wallpaperFile.copy(destWallpaper, Gio.FileCopyFlags.OVERWRITE, null, null);
+
+            spinnerDialog.destroy();
+            this.app.showSuccess(`Theme ejected successfully to:\n${outputPath}`);
+            print(`✓ Theme ejected to: ${outputPath}`);
+        } catch (error) {
+            spinnerDialog.destroy();
+            this.app.showError(`Error creating theme: ${error.message}`);
+        }
+    }
+
+    getFileExtension(fileName) {
+        const lastDot = fileName.lastIndexOf('.');
+        return lastDot > 0 ? fileName.substring(lastDot) : '';
+    }
+
+    showEjectionSpinner() {
+        const { Adw, Gtk } = imports.gi;
+        const dialog = new Adw.MessageDialog({
+            transient_for: this.app.get_active_window(),
+            modal: true,
+            heading: 'Ejecting Theme...',
+            body: 'Generating colors and creating theme files...'
+        });
+
+        const spinner = new Gtk.Spinner({
+            spinning: true,
+            width_request: 32,
+            height_request: 32,
+            margin_top: 12,
+            margin_bottom: 12
+        });
+
+        const box = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 12
+        });
+        box.append(spinner);
+        dialog.set_extra_child(box);
+
+        dialog.present();
+        return dialog;
+    }
 };

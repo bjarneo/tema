@@ -208,6 +208,8 @@ class TemaApp extends Adw.Application {
         switch (keyval) {
             case 65293: // Enter key
                 return this.handleEnterKey(grid, window);
+            case 101: // 'e' key
+                return this.handleEjectKey(grid, window);
             case 63: // '?' key
                 this.dialogManager.showHelpModal(window);
                 return true;
@@ -231,6 +233,17 @@ class TemaApp extends Adw.Application {
         return true;
     }
 
+    handleEjectKey(grid, window) {
+        const selected = grid.get_selected_children();
+        if (selected.length > 0) {
+            const selectedBox = selected[0].get_child();
+            if (selectedBox && selectedBox._filePath) {
+                this.handleThemeEjection(selectedBox._filePath, selectedBox._fileName);
+            }
+        }
+        return true;
+    }
+
     handleWallpaperSelection(filePath, fileName) {
         const window = this.get_active_window();
         this.dialogManager.showModeDialog(
@@ -238,6 +251,16 @@ class TemaApp extends Adw.Application {
             filePath,
             fileName,
             (path, name, isLight) => this.setWallpaper(path, name, isLight)
+        );
+    }
+
+    handleThemeEjection(filePath, fileName) {
+        const window = this.get_active_window();
+        this.dialogManager.showThemeEjectionDialog(
+            window,
+            filePath,
+            fileName,
+            (path, name, isLight, outputPath) => this.themeGenerator.ejectTheme(path, name, isLight, outputPath)
         );
     }
 
