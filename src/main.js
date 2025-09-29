@@ -3,10 +3,22 @@ imports.gi.versions.Adw = '1';
 
 const { Gtk, Adw, GLib, GObject, Gio } = imports.gi;
 
-const { ThumbnailManager } = imports.ThumbnailManager;
-const { DialogManager } = imports.DialogManager;
-const { ThemeGenerator } = imports.ThemeGenerator;
-const { WallpaperManager } = imports.WallpaperManager;
+// Detect if we're running in development mode or packaged mode
+let ThumbnailManager, DialogManager, ThemeGenerator, WallpaperManager;
+
+try {
+    // Try development mode imports first (when running ./init.js)
+    ({ ThumbnailManager } = imports.src.ThumbnailManager);
+    ({ DialogManager } = imports.src.DialogManager);
+    ({ ThemeGenerator } = imports.src.ThemeGenerator);
+    ({ WallpaperManager } = imports.src.WallpaperManager);
+} catch (e) {
+    // Fall back to packaged mode imports (when running installed tema)
+    ({ ThumbnailManager } = imports.ThumbnailManager);
+    ({ DialogManager } = imports.DialogManager);
+    ({ ThemeGenerator } = imports.ThemeGenerator);
+    ({ WallpaperManager } = imports.WallpaperManager);
+}
 
 const APP_ID = 'com.bjarneo.Tema';
 
