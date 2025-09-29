@@ -150,8 +150,6 @@ Tēma is now integrated as an Omarchy theme! The templates are symlinked to `~/.
 ```bash
 # Copy existing wallpapers from Omarchy themes to get started
 cp ~/.config/omarchy/themes/**/backgrounds/* ~/Wallpapers/
-
-# The templates will use pywal variables and automatically update when you change wallpapers
 ```
 
 ### Recommended Keybind
