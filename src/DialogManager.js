@@ -22,7 +22,10 @@ Application:
 q, Esc - Quit application
 
 Setting Wallpapers:
-Enter/Double-click - Choose dark/light mode for selected wallpaper`
+Enter/Double-click - Choose dark/light mode for selected wallpaper
+
+Theme Ejection:
+e - Eject selected wallpaper as a standalone theme`
         });
 
         dialog.add_response('ok', 'Got it!');
@@ -93,5 +96,82 @@ Enter/Double-click - Choose dark/light mode for selected wallpaper`
             dialog.connect('response', () => dialog.destroy());
             dialog.present();
         }
+    }
+
+    showThemeEjectionDialog(parent, filePath, fileName, callback) {
+        const dialog = new Adw.MessageDialog({
+            transient_for: parent,
+            modal: true,
+            heading: 'Eject Theme',
+            body: `Create theme from: ${fileName}`
+        });
+
+        dialog.add_response('dark', 'Dark Mode');
+        dialog.add_response('light', 'Light Mode');
+        dialog.add_response('cancel', 'Cancel');
+
+        dialog.set_response_appearance('dark', Adw.ResponseAppearance.SUGGESTED);
+        dialog.set_default_response('dark');
+        dialog.set_close_response('cancel');
+
+        dialog.connect('response', (dialog, response) => {
+            if (response === 'dark' || response === 'light') {
+                const isLight = response === 'light';
+                dialog.destroy();
+                this.showPathSelectionDialog(parent, filePath, fileName, isLight, callback);
+            } else {
+                dialog.destroy();
+            }
+        });
+
+        dialog.present();
+    }
+
+    showPathSelectionDialog(parent, filePath, fileName, isLight, callback) {
+        const { GLib } = imports.gi;
+        const homeDir = GLib.get_home_dir();
+        const themeName = fileName.replace(/\.[^.]+$/, '');
+        const defaultPath = `${homeDir}/omarchy-${themeName}-theme`;
+
+        const dialog = new Adw.MessageDialog({
+            transient_for: parent,
+            modal: true,
+            heading: 'Select Output Path',
+            body: 'Enter the path where the theme should be created:'
+        });
+
+        const entry = new Gtk.Entry({
+            text: defaultPath,
+            hexpand: true,
+            margin_top: 12,
+            margin_bottom: 12,
+            margin_start: 12,
+            margin_end: 12
+        });
+
+        const box = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 6
+        });
+        box.append(entry);
+        dialog.set_extra_child(box);
+
+        dialog.add_response('create', 'Create Theme');
+        dialog.add_response('cancel', 'Cancel');
+
+        dialog.set_response_appearance('create', Adw.ResponseAppearance.SUGGESTED);
+        dialog.set_default_response('create');
+        dialog.set_close_response('cancel');
+
+        dialog.connect('response', (dialog, response) => {
+            if (response === 'create') {
+                const outputPath = entry.get_text();
+                callback(filePath, fileName, isLight, outputPath);
+            }
+            dialog.destroy();
+        });
+
+        dialog.present();
+        entry.grab_focus();
     }
 };
