@@ -16,6 +16,11 @@ This application is built on top of the incredible work by these amazing creator
 
 Huge kudos to this amazing project - without their awesome work, Tēma wouldn't exist! 🎨
 
+## Install
+```bash
+yay -S tema-git
+```
+
 ## Features
 
 - Browse wallpapers from `~/Wallpapers/` directory
@@ -47,6 +52,21 @@ bindd = SUPER SHIFT, T, Tema, exec, uwsm app -- tema
 ```
 
 This allows you to press `Super + Shift + T` to open the wallpaper selector.
+
+## Setup
+
+1. Create the wallpapers directory if it doesn't exist:
+   ```bash
+   mkdir -p ~/Wallpapers
+   ```
+
+2. Add your wallpaper images to the `~/Wallpapers/` directory. Supported formats:
+   - JPG/JPEG
+   - PNG
+   - GIF
+   - BMP
+   - WebP
+   - TIFF
 
 ## Installing as a Native App
 
@@ -131,36 +151,6 @@ sudo pacman -S gdk-pixbuf2
 
 # For wallpaper and color scheme management
 sudo pacman -S python-pywal
-```
-
-## Setup
-
-1. Create the wallpapers directory if it doesn't exist:
-   ```bash
-   mkdir -p ~/Wallpapers
-   ```
-
-2. Add your wallpaper images to the `~/Wallpapers/` directory. Supported formats:
-   - JPG/JPEG
-   - PNG
-   - GIF
-   - BMP
-   - WebP
-   - TIFF
-
-## Running the Application
-
-Make the script executable and run it:
-
-```bash
-chmod +x init.js
-./init.js
-```
-
-Or run it directly with gjs:
-
-```bash
-gjs -m init.js
 ```
 
 ### How it Works
