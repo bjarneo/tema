@@ -66,27 +66,32 @@ gjs -m init.js
 
 ## Installing as a Native App
 
-### Option 1: Desktop Entry (Quick Setup)
+### Option 1: AUR Package (Recommended for Arch Linux)
 
-To make Tēma appear in your application menu:
+Install from the AUR using your preferred AUR helper:
 
 ```bash
-# Install the desktop file for current user
-cp tema.desktop ~/.local/share/applications/
+# Using yay
+yay -S tema-git
 
-# Or install system-wide (requires sudo)
-sudo cp tema.desktop /usr/share/applications/
+# Using paru
+paru -S tema-git
+
+# Manual installation
+git clone https://aur.archlinux.org/tema-git.git
+cd tema-git
+makepkg -si
 ```
 
-After installation, you can launch Tēma from your desktop environment's application launcher.
+This provides the cleanest installation with proper package management.
 
-### Option 2: Proper Installation with Meson
+### Option 2: Proper Installation with Meson (GJS Packaging Standard)
 
-For a complete native app installation:
+For a complete native app installation following GTK/GJS standards:
 
 ```bash
 # Install build dependencies
-sudo pacman -S meson ninja
+sudo pacman -S meson ninja gjs gtk4 libadwaita
 
 # Build and install
 meson setup builddir
@@ -94,19 +99,32 @@ meson compile -C builddir
 sudo meson install -C builddir
 ```
 
-This installs Tēma to `/usr/local/bin/tema` and adds it to your application menu.
+This installs:
+- Main application to `/usr/local/share/com.bjarneo.Tema/`
+- Command line symlink at `/usr/local/bin/tema`
+- Desktop file for application launcher
+- Template files to `/usr/local/share/com.bjarneo.Tema/templates/`
 
-### Option 3: Command Line Access
+### Option 3: Development Setup
 
-To run Tēma from anywhere in the terminal:
+For development or quick testing:
 
 ```bash
-# Create symlink to PATH
+# Make executable and run directly
 chmod +x init.js
-sudo ln -s $(pwd)/init.js /usr/local/bin/tema
+./init.js
+```
 
-# Now you can run it from anywhere
-tema
+### Option 4: Manual Desktop Integration
+
+To make Tēma appear in your application menu without full installation:
+
+```bash
+# Copy desktop file for current user
+cp data/com.bjarneo.Tema.desktop ~/.local/share/applications/
+
+# Edit the desktop file to point to your local copy
+sed -i "s|Exec=tema|Exec=$(pwd)/init.js|" ~/.local/share/applications/com.bjarneo.Tema.desktop
 ```
 
 ## Omarchy Theme Integration
@@ -155,9 +173,64 @@ When you set a wallpaper through Tēma, it will:
 - Ensure image files have supported extensions
 - Install additional image format support if needed
 
+## Creating an AUR Package
+
+If you want to create and publish your own AUR package:
+
+### Prerequisites
+
+1. **Update the PKGBUILD**: Edit the `PKGBUILD` file and change:
+   - Repository URL to your actual GitHub repository
+   - Maintainer information at the top
+
+2. **Test the package locally**:
+   ```bash
+   # Install dependencies first
+   sudo pacman -S meson ninja gjs gtk4 libadwaita python-pywal
+
+   # Test build
+   makepkg -si
+   ```
+
+### Publishing to AUR
+
+1. **Set up AUR access** (if you haven't already):
+   ```bash
+   # Generate SSH key if you don't have one
+   ssh-keygen -t rsa -b 4096 -C "your.email@example.com"
+
+   # Add your public key to your AUR account at https://aur.archlinux.org/
+   ```
+
+2. **Clone and submit**:
+   ```bash
+   # Clone the AUR repository (replace with your package name)
+   git clone ssh://aur@aur.archlinux.org/tema-git.git aur-tema
+
+   # Copy packaging files
+   cp PKGBUILD .SRCINFO tema.install aur-tema/
+
+   # Submit to AUR
+   cd aur-tema
+   git add -A
+   git commit -m "Initial tema-git package"
+   git push
+   ```
+
+### Package Structure
+
+The AUR package follows the [GJS packaging specification](https://gjs.guide/guides/gtk/gtk4.html#packaging) and includes:
+
+- **Standard compliant structure**: Uses proper DBus naming (`com.bjarneo.Tema`)
+- **GResource bundling**: JavaScript code bundled for efficiency
+- **Template installation**: Theme templates installed to `/usr/share/com.bjarneo.Tema/templates/`
+- **Desktop integration**: Proper desktop file and symlinks
+- **Dependency management**: All runtime and build dependencies specified
+
 ## Technical Details
 
 - Built with GTK4 and libadwaita for modern GNOME integration
 - Written in GJS (GNOME JavaScript)
 - Uses GdkPixbuf for image loading and thumbnail generation
 - Integrates with pywal for system-wide color scheme management
+- Follows the official GTK/GJS application packaging specification

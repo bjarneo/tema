@@ -1,0 +1,8 @@
+#!/usr/bin/gjs
+#!@GJS@
+imports.package.init({
+    name: "@PACKAGE_NAME@",
+    version: "@PACKAGE_VERSION@",
+    prefix: "@prefix@"
+});
+imports.package.run('main');
