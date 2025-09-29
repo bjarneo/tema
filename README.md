@@ -27,6 +27,27 @@ Huge kudos to this amazing project - without their awesome work, Tēma wouldn't 
 - Thumbnail caching with ImageMagick support
 - Modular architecture for better maintainability
 
+## Omarchy Integration
+
+Tēma is now integrated as an Omarchy theme! The templates are symlinked to `~/.config/omarchy/themes/tema`.
+
+### Setup with Omarchy
+```bash
+# Copy existing wallpapers from Omarchy themes to get started
+cp ~/.config/omarchy/themes/**/backgrounds/* ~/Wallpapers/
+```
+
+### Recommended Keybind
+
+Add this keybind to your Hyprland configuration to quickly launch Tēma:
+
+`~/.config/hypr/bindings.conf`
+```bash
+bindd = SUPER SHIFT, T, Tema, exec, uwsm app -- tema
+```
+
+This allows you to press `Super + Shift + T` to open the wallpaper selector.
+
 ## Installing as a Native App
 
 ### Option 1: AUR Package (Recommended for Arch Linux)
@@ -141,27 +162,6 @@ Or run it directly with gjs:
 ```bash
 gjs -m init.js
 ```
-
-## Omarchy Integration
-
-Tēma is now integrated as an Omarchy theme! The templates are symlinked to `~/.config/omarchy/themes/tema`.
-
-### Setup with Omarchy
-```bash
-# Copy existing wallpapers from Omarchy themes to get started
-cp ~/.config/omarchy/themes/**/backgrounds/* ~/Wallpapers/
-```
-
-### Recommended Keybind
-
-Add this keybind to your Hyprland configuration to quickly launch Tēma:
-
-`~/.config/hypr/bindings.conf`
-```bash
-bindd = SUPER SHIFT, T, Tema, exec, uwsm app -- tema
-```
-
-This allows you to press `Super + Shift + T` to open the wallpaper selector.
 
 ### How it Works
 
