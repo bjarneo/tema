@@ -1,5 +1,7 @@
 # Tēma - Omarchy Theming
 
+> **テーマ (tēma)**: This is a loanword from English ("theme") written in katakana. It's widely used and understood in Japan, especially in the context of a theme for a website, an application, or a graphical user interface.
+
 A GTK4/Adwaita Omarchy theming application that integrates with pywal for automatic color scheme generation.
 
 > **⚠️ Important:** Tēma requires wallpapers to be placed in `~/Wallpapers/` directory to function. Create this directory and add your wallpaper images before running the application.
