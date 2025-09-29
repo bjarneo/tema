@@ -1,6 +1,6 @@
 # Tēma - Omarchy Theming
 
-https://github.com/user-attachments/assets/demo.mp4
+https://github.com/user-attachments/assets/234de9ea-5ca3-4b3f-9112-a08f02a91424
 
 > **テーマ (tēma)**: This is a loanword from English ("theme") written in katakana. It's widely used and understood in Japan, especially in the context of a theme for a website, an application, or a graphical user interface.
 
