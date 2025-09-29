@@ -443,11 +443,84 @@ class TemaApp extends Adw.Application {
                 }
                 return true;
             }
+
+            // Handle vim-style navigation (hjkl)
+            const selected = grid.get_selected_children();
+            if (selected.length > 0) {
+                const currentChild = selected[0];
+                const currentIndex = currentChild.get_index();
+
+                // Get all children using GTK4 API
+                const children = [];
+                let child = grid.get_first_child();
+                while (child) {
+                    children.push(child);
+                    child = child.get_next_sibling();
+                }
+
+                const maxChildrenPerLine = grid.max_children_per_line;
+                const totalChildren = children.length;
+
+                let newIndex = currentIndex;
+
+                switch (keyval) {
+                    case 104: // 'h' - left
+                        if (currentIndex > 0) {
+                            newIndex = currentIndex - 1;
+                        }
+                        break;
+                    case 108: // 'l' - right
+                        if (currentIndex < totalChildren - 1) {
+                            newIndex = currentIndex + 1;
+                        }
+                        break;
+                }
+
+                if (newIndex !== currentIndex && newIndex >= 0 && newIndex < totalChildren) {
+                    grid.unselect_all();
+                    grid.select_child(children[newIndex]);
+                    return true;
+                }
+            }
+
+            // Handle help modal with '?' key
+            if (keyval === 63) { // '?'
+                this.showHelpModal(window);
+                return true;
+            }
+
             return false;
         });
 
         // Make sure the grid can receive focus
         grid.grab_focus();
+    }
+
+    showHelpModal(parent) {
+        // Create help dialog
+        const dialog = new Adw.MessageDialog({
+            transient_for: parent,
+            modal: true,
+            heading: 'Keyboard Shortcuts',
+            body: `Navigation:
+h, l - Vim-style navigation (left, right)
+Arrow keys - Navigate through wallpapers
+Enter - Set selected wallpaper
+Tab - Move focus between UI elements
+
+Help:
+? - Show this help dialog
+
+Setting Wallpapers:
+Enter/Double-click - Choose dark/light mode for selected wallpaper`
+        });
+
+        dialog.add_response('ok', 'Got it!');
+        dialog.set_default_response('ok');
+        dialog.set_close_response('ok');
+
+        dialog.connect('response', () => dialog.destroy());
+        dialog.present();
     }
 
     showModeDialog(parent, filePath, fileName) {
