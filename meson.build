@@ -47,7 +47,7 @@ entry_point = configure_file(
 # Create symlink in bindir for command line usage
 install_symlink(
   package_tarname,
-  pointing_to: get_option('datadir') / package_name / app_id,
+  pointing_to: '/usr/share/' + package_name + '/' + app_id,
   install_dir: get_option('bindir')
 )
 
