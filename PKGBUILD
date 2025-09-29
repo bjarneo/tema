@@ -1,6 +1,6 @@
 # Maintainer: Your Name <your.email@example.com>
 pkgname=tema-git
-pkgver=1.0.0.r28.gd704bd2
+pkgver=1.0.0.r32.gdad859e
 pkgrel=1
 pkgdesc="A GTK4/Adwaita Omarchy theming application with pywal integration"
 arch=('any')

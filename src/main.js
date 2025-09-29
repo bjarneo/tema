@@ -1,40 +1,9 @@
-// For compatibility with both old and new imports systems
-const { Gtk, Adw, GLib, GObject, Gio, GdkPixbuf } = (() => {
-    try {
-        // Try new package system first
-        if (typeof pkg !== 'undefined') {
-            pkg.require({
-                'Gtk': '4.0',
-                'Adw': '1',
-                'GLib': '2.0',
-                'GObject': '2.0',
-                'Gio': '2.0',
-                'GdkPixbuf': '2.0'
-            });
-            return imports.gi;
-        }
-    } catch (e) {
-        // Fall back to direct imports for development
-    }
+// Set up GTK versions
+imports.gi.versions.Gtk = '4.0';
+imports.gi.versions.Adw = '1';
 
-    // Ensure GTK and Adw versions for direct imports
-    if (typeof imports !== 'undefined') {
-        imports.gi.versions.Gtk = '4.0';
-        imports.gi.versions.Adw = '1';
-        return {
-            Gtk: imports.gi.Gtk,
-            Adw: imports.gi.Adw,
-            GLib: imports.gi.GLib,
-            GObject: imports.gi.GObject,
-            Gio: imports.gi.Gio,
-            GdkPixbuf: imports.gi.GdkPixbuf
-        };
-    }
-
-    // If we get here, we're probably in ES6 module context, return empty object
-    // and let the import system handle it
-    return {};
-})();
+// Import GTK modules
+const { Gtk, Adw, GLib, GObject, Gio, GdkPixbuf } = imports.gi;
 
 // Application ID
 const APP_ID = 'com.bjarneo.Tema';
