@@ -10,9 +10,9 @@ project('tema',
 gnome = import('gnome')
 
 # Package configuration
-package_name = 'com.bjarneo.Tema'
+package_name = 'tema'
 package_tarname = 'tema'
-app_id = package_name
+app_id = 'com.bjarneo.Tema'
 
 # Dependencies
 dependency('gjs-1.0', version: '>= 1.66')
@@ -21,8 +21,8 @@ dependency('libadwaita-1', version: '>= 1.0')
 
 # Compile GResource for JavaScript source files
 src_resource = gnome.compile_resources(
-  'com.bjarneo.Tema.src',
-  'src/com.bjarneo.Tema.src.gresource.xml',
+  app_id + '.src',
+  'src/' + app_id + '.src.gresource.xml',
   source_dir: 'src',
   gresource_bundle: true,
   install: true,
@@ -31,11 +31,11 @@ src_resource = gnome.compile_resources(
 
 # Configure and install the entry point script
 entry_point = configure_file(
-  input: 'src/com.bjarneo.Tema.in',
-  output: package_name,
+  input: 'src/' + app_id + '.in',
+  output: app_id,
   configuration: {
     'GJS': find_program('gjs').full_path(),
-    'PACKAGE_NAME': package_name,
+    'PACKAGE_NAME': app_id,
     'PACKAGE_VERSION': meson.project_version(),
     'prefix': get_option('prefix'),
   },
@@ -47,14 +47,14 @@ entry_point = configure_file(
 # Create symlink in bindir for command line usage
 install_symlink(
   package_tarname,
-  pointing_to: get_option('datadir') / package_name / package_name,
+  pointing_to: get_option('datadir') / package_name / app_id,
   install_dir: get_option('bindir')
 )
 
 # Install desktop file
 desktop_file = configure_file(
-  input: 'data/com.bjarneo.Tema.desktop.in',
-  output: 'com.bjarneo.Tema.desktop',
+  input: 'data/' + app_id + '.desktop.in',
+  output: app_id + '.desktop',
   configuration: {
     'bindir': get_option('prefix') / get_option('bindir'),
   },

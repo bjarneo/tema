@@ -100,10 +100,10 @@ sudo meson install -C builddir
 ```
 
 This installs:
-- Main application to `/usr/local/share/com.bjarneo.Tema/`
+- Main application to `/usr/local/share/tema/`
 - Command line symlink at `/usr/local/bin/tema`
 - Desktop file for application launcher
-- Template files to `/usr/local/share/com.bjarneo.Tema/templates/`
+- Template files to `/usr/local/share/tema/templates/`
 
 ### Option 3: Development Setup
 
@@ -223,7 +223,7 @@ The AUR package follows the [GJS packaging specification](https://gjs.guide/guid
 
 - **Standard compliant structure**: Uses proper DBus naming (`com.bjarneo.Tema`)
 - **GResource bundling**: JavaScript code bundled for efficiency
-- **Template installation**: Theme templates installed to `/usr/share/com.bjarneo.Tema/templates/`
+- **Template installation**: Theme templates installed to `/usr/share/tema/templates/`
 - **Desktop integration**: Proper desktop file and symlinks
 - **Dependency management**: All runtime and build dependencies specified
 
