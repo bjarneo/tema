@@ -102,6 +102,7 @@ var ThemeGenerator = class ThemeGenerator {
     processTemplates(templatesDir, temaThemeDir, colors) {
         const templateMappings = [
             ['alacritty.toml', temaThemeDir + '/alacritty.toml'],
+            ['kitty.conf', temaThemeDir + '/kitty.conf'],
             ['waybar.css', temaThemeDir + '/waybar.css'],
             ['hyprland.conf', temaThemeDir + '/hyprland.conf'],
             ['mako.ini', temaThemeDir + '/mako.ini'],
