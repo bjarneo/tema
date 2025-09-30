@@ -6,6 +6,7 @@
     <file>DialogManager.js</file>
     <file>ThemeGenerator.js</file>
     <file>WallpaperManager.js</file>
+    <file>TemaTheming.js</file>
     <file>style.css</file>
   </gresource>
 </gresources>

@@ -4,7 +4,7 @@ imports.gi.versions.Adw = '1';
 const { Gtk, Adw, GLib, GObject, Gio, Gdk } = imports.gi;
 
 // Detect if we're running in development mode or packaged mode
-let ThumbnailManager, DialogManager, ThemeGenerator, WallpaperManager;
+let ThumbnailManager, DialogManager, ThemeGenerator, WallpaperManager, TemaTheming;
 
 try {
     // Try development mode imports first (when running ./init.js)
@@ -12,12 +12,14 @@ try {
     ({ DialogManager } = imports.src.DialogManager);
     ({ ThemeGenerator } = imports.src.ThemeGenerator);
     ({ WallpaperManager } = imports.src.WallpaperManager);
+    ({ TemaTheming } = imports.src.TemaTheming);
 } catch (e) {
     // Fall back to packaged mode imports (when running installed tema)
     ({ ThumbnailManager } = imports.ThumbnailManager);
     ({ DialogManager } = imports.DialogManager);
     ({ ThemeGenerator } = imports.ThemeGenerator);
     ({ WallpaperManager } = imports.WallpaperManager);
+    ({ TemaTheming } = imports.TemaTheming);
 }
 
 const APP_ID = 'com.bjarneo.Tema';
@@ -36,10 +38,12 @@ class TemaApp extends Adw.Application {
         this.dialogManager = new DialogManager(this);
         this.themeGenerator = new ThemeGenerator(this);
         this.wallpaperManager = new WallpaperManager(this);
+        this.temaTheming = new TemaTheming();
     }
 
     vfunc_activate() {
         this.loadCustomCSS();
+        this.temaTheming.applyDynamicTheming();
 
         const window = this.createMainWindow();
         const mainBox = this.createMainContent();
@@ -56,7 +60,26 @@ class TemaApp extends Adw.Application {
     loadCustomCSS() {
         const cssProvider = new Gtk.CssProvider();
         try {
-            // Try loading from gresource first (packaged mode)
+            // Try loading from file first for development mode
+            let cssPath = GLib.get_current_dir() + '/src/style.css';
+            let cssFile = Gio.File.new_for_path(cssPath);
+
+            if (cssFile.query_exists(null)) {
+                try {
+                    cssProvider.load_from_file(cssFile);
+                    Gtk.StyleContext.add_provider_for_display(
+                        Gdk.Display.get_default(),
+                        cssProvider,
+                        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+                    );
+                    print('✓ Custom CSS loaded from file:', cssPath);
+                    return;
+                } catch (e) {
+                    print('Error loading CSS from file:', e.message);
+                }
+            }
+
+            // Fall back to gresource (packaged mode)
             try {
                 cssProvider.load_from_resource('/com/bjarneo/Tema/js/style.css');
                 Gtk.StyleContext.add_provider_for_display(
@@ -65,21 +88,8 @@ class TemaApp extends Adw.Application {
                     Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
                 );
                 print('✓ Custom CSS loaded from gresource');
-                return;
             } catch (e) {
-                // Fall back to file path for development mode
-                let cssPath = GLib.get_current_dir() + '/src/style.css';
-                let cssFile = Gio.File.new_for_path(cssPath);
-
-                if (cssFile.query_exists(null)) {
-                    cssProvider.load_from_file(cssFile);
-                    Gtk.StyleContext.add_provider_for_display(
-                        Gdk.Display.get_default(),
-                        cssProvider,
-                        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-                    );
-                    print('✓ Custom CSS loaded from file');
-                }
+                print('Note: Custom CSS not loaded from gresource');
             }
         } catch (error) {
             print('Note: Custom CSS not loaded:', error.message);
@@ -266,6 +276,8 @@ class TemaApp extends Adw.Application {
 
     setWallpaper(imagePath, fileName, lightMode) {
         this.wallpaperManager.setWallpaper(imagePath, fileName, lightMode);
+        // Reapply theming based on selected mode
+        this.temaTheming.applyDynamicTheming(!lightMode);
     }
 
     showError(message) {
