@@ -43,10 +43,12 @@ var TemaTheming = class TemaTheming {
             const [success, contents] = file.load_contents(null);
             if (success) {
                 const text = new TextDecoder().decode(contents);
-                const lines = text.split('\n').filter(line => line.trim() && !line.startsWith('#'));
+                const lines = text.split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line && line.startsWith('#'));
 
                 if (lines.length > 0) {
-                    return lines[0].trim();
+                    return lines[0];
                 }
             }
         } catch (e) {
