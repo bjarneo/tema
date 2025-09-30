@@ -13,6 +13,7 @@ A GTK4/Adwaita Omarchy theming application that integrates with pywal for automa
 This application is built on top of the incredible work by these amazing creators:
 
 - **[pywal](https://github.com/dylanaraps/pywal)** by [@dylanaraps](https://github.com/dylanaraps) - The original and foundational pywal that revolutionized automatic color scheme generation
+- **[pywal16](https://github.com/eylles/pywal16)** by [@eylles](https://github.com/eylles) - The maintained fork of pywal
 
 Huge kudos to this amazing project - without their awesome work, Tēma wouldn't exist! 🎨
 
