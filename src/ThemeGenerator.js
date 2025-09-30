@@ -114,7 +114,8 @@ var ThemeGenerator = class ThemeGenerator {
             ['btop.theme', temaThemeDir + '/btop.theme'],
             ['swayosd.css', temaThemeDir + '/swayosd.css'],
             ['walker.css', temaThemeDir + '/walker.css'],
-            ['hyprlock.conf', temaThemeDir + '/hyprlock.conf']
+            ['hyprlock.conf', temaThemeDir + '/hyprlock.conf'],
+            ['chromium.theme', temaThemeDir + '/chromium.theme']
         ];
 
         for (const [templateName, temaOutput] of templateMappings) {
@@ -123,6 +124,13 @@ var ThemeGenerator = class ThemeGenerator {
                 this.processTemplate(templateFile.get_path(), temaOutput, colors);
             }
         }
+    }
+
+    hexToRgb(hex) {
+        const r = parseInt(hex.substring(1, 3), 16);
+        const g = parseInt(hex.substring(3, 5), 16);
+        const b = parseInt(hex.substring(5, 7), 16);
+        return `${r} ${g} ${b}`;
     }
 
     processTemplate(templatePath, outputPath, colors) {
@@ -141,6 +149,10 @@ var ThemeGenerator = class ThemeGenerator {
                 templateContent = templateContent.replace(
                     new RegExp(`\\{${key}\\.strip\\}`, 'g'),
                     value.replace('#', '')
+                );
+                templateContent = templateContent.replace(
+                    new RegExp(`\\{${key}\\.rgb\\}`, 'g'),
+                    this.hexToRgb(value)
                 );
                 templateContent = templateContent.replace(
                     new RegExp(`\\{${key}\\}`, 'g'),
@@ -165,7 +177,7 @@ var ThemeGenerator = class ThemeGenerator {
     }
 
     copyStaticFiles(templatesDir, temaThemeDir) {
-        const staticFiles = ['README.md', 'theme.png', 'neovim.lua', 'chromium.theme'];
+        const staticFiles = ['README.md', 'theme.png', 'neovim.lua'];
 
         for (const staticFile of staticFiles) {
             const sourceFile = Gio.File.new_for_path(templatesDir + '/' + staticFile);
