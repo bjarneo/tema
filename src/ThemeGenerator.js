@@ -38,6 +38,9 @@ var ThemeGenerator = class ThemeGenerator {
             this.setOmarchyBackground(colors, configBase);
 
             print('✓ Template generation complete!');
+
+            // Apply dynamic theming after theme is set successfully
+            this.app.temaTheming.applyDynamicTheming();
         } catch (error) {
             print('Error in template generation:', error.message);
         }

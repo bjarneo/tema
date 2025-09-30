@@ -31,24 +31,60 @@ var TemaTheming = class TemaTheming {
         return true; // Default to dark
     }
 
-    generateDynamicCSS(isDark) {
-        if (isDark) {
-            return `
-/* Main window background - Dark mode */
-window {
-    background-color: rgba(10, 10, 20, 0.95);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-}
-`;
-        } else {
-            return `
-/* Main window background - Light mode */
-window {
-    background-color: rgba(245, 245, 250, 0.95);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-}
-`;
+    getPywalBackgroundColor() {
+        try {
+            const pywalColorsPath = GLib.get_home_dir() + '/.cache/wal/colors';
+            const file = Gio.File.new_for_path(pywalColorsPath);
+
+            if (!file.query_exists(null)) {
+                return null;
+            }
+
+            const [success, contents] = file.load_contents(null);
+            if (success) {
+                const text = new TextDecoder().decode(contents);
+                const lines = text.split('\n').filter(line => line.trim() && !line.startsWith('#'));
+
+                if (lines.length > 0) {
+                    return lines[0].trim();
+                }
+            }
+        } catch (e) {
+            print('Could not read pywal colors:', e.message);
         }
+        return null;
+    }
+
+    hexToRgba(hex, alpha = 0.95) {
+        hex = hex.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    generateDynamicCSS(isDark) {
+        const pywalBg = this.getPywalBackgroundColor();
+        let backgroundColor;
+
+        if (pywalBg) {
+            backgroundColor = this.hexToRgba(pywalBg, 0.95);
+            print('Using pywal background color:', pywalBg, '->', backgroundColor);
+        } else {
+            // Fallback to current dark/light mode
+            backgroundColor = isDark ? 'rgba(10, 10, 20, 0.95)' : 'rgba(245, 245, 250, 0.95)';
+            print('Pywal color not found, using fallback:', backgroundColor);
+        }
+
+        const boxShadow = isDark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.15)';
+
+        return `
+/* Main window background */
+window {
+    background-color: ${backgroundColor};
+    box-shadow: 0 4px 20px ${boxShadow};
+}
+`;
     }
 
     applyDynamicTheming(forceDark = null) {
