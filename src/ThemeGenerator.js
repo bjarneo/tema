@@ -177,7 +177,7 @@ var ThemeGenerator = class ThemeGenerator {
     }
 
     copyStaticFiles(templatesDir, temaThemeDir) {
-        const staticFiles = ['README.md', 'theme.png', 'neovim.lua'];
+        const staticFiles = ['neovim.lua', 'icons.theme'];
 
         for (const staticFile of staticFiles) {
             const sourceFile = Gio.File.new_for_path(templatesDir + '/' + staticFile);
