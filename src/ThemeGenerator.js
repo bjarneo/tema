@@ -402,10 +402,15 @@ var ThemeGenerator = class ThemeGenerator {
             this.copyStaticFiles(templatesDir, outputPath);
             this.handleLightMode(colors, outputPath);
 
-            // Copy the wallpaper to the theme directory
+            // Create backgrounds directory and copy the wallpaper
+            const backgroundsDir = Gio.File.new_for_path(outputPath + '/backgrounds');
+            if (!backgroundsDir.query_exists(null)) {
+                backgroundsDir.make_directory(null);
+            }
+
             const wallpaperFile = Gio.File.new_for_path(imagePath);
             const wallpaperName = wallpaperFile.get_basename();
-            const destWallpaper = Gio.File.new_for_path(outputPath + '/background' + this.getFileExtension(wallpaperName));
+            const destWallpaper = Gio.File.new_for_path(outputPath + '/backgrounds/' + wallpaperName);
             wallpaperFile.copy(destWallpaper, Gio.FileCopyFlags.OVERWRITE, null, null);
 
             spinnerDialog.destroy();
