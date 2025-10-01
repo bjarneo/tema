@@ -125,8 +125,8 @@ class TemaApp extends Adw.Application {
             valign: Gtk.Align.START,
             max_children_per_line: 6,
             selection_mode: Gtk.SelectionMode.SINGLE,
-            column_spacing: 12,
-            row_spacing: 12,
+            column_spacing: 4,
+            row_spacing: 4,
             can_focus: true,
             activate_on_single_click: false
         });

@@ -1,5 +1,7 @@
 const { Gtk, GLib, Gio, GdkPixbuf } = imports.gi;
 
+const THUMBNAIL_SIZE = 92;
+
 var ThumbnailManager = class ThumbnailManager {
     constructor() {
         this.cacheDir = null;
@@ -52,8 +54,8 @@ var ThumbnailManager = class ThumbnailManager {
             if (placeholderFile.query_exists(null)) {
                 const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
                     placeholderPath,
-                    128,
-                    128,
+                    THUMBNAIL_SIZE,
+                    THUMBNAIL_SIZE,
                     true
                 );
                 placeholderWidget = new Gtk.Picture();
@@ -62,25 +64,25 @@ var ThumbnailManager = class ThumbnailManager {
             } else {
                 placeholderWidget = new Gtk.Spinner({
                     spinning: true,
-                    width_request: 128,
-                    height_request: 128
+                    width_request: THUMBNAIL_SIZE,
+                    height_request: THUMBNAIL_SIZE
                 });
             }
         } catch (error) {
             placeholderWidget = new Gtk.Spinner({
                 spinning: true,
-                width_request: 128,
-                height_request: 128
+                width_request: THUMBNAIL_SIZE,
+                height_request: THUMBNAIL_SIZE
             });
         }
 
         const box = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
             spacing: 6,
-            margin_top: 6,
-            margin_bottom: 6,
-            margin_start: 6,
-            margin_end: 6
+            margin_top: 2,
+            margin_bottom: 2,
+            margin_start: 2,
+            margin_end: 2
         });
 
         box.append(placeholderWidget);
@@ -157,7 +159,13 @@ var ThumbnailManager = class ThumbnailManager {
     generateThumbnailWithImageMagick(placeholder, filePath, thumbnailPath) {
         try {
             const subprocess = new Gio.Subprocess({
-                argv: ['magick', filePath, '-thumbnail', '128x128>', thumbnailPath],
+                argv: [
+                    'magick', filePath,
+                    '-resize', `${THUMBNAIL_SIZE}x${THUMBNAIL_SIZE}^`,
+                    '-gravity', 'center',
+                    '-extent', `${THUMBNAIL_SIZE}x${THUMBNAIL_SIZE}`,
+                    thumbnailPath
+                ],
                 flags: Gio.SubprocessFlags.STDERR_PIPE
             });
             subprocess.init(null);
@@ -185,15 +193,40 @@ var ThumbnailManager = class ThumbnailManager {
 
     generateThumbnailFallback(placeholder, filePath, fileName) {
         try {
-            const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                filePath,
-                128,
-                128,
-                true
+            // Load the original image to get dimensions
+            const originalPixbuf = GdkPixbuf.Pixbuf.new_from_file(filePath);
+            const origWidth = originalPixbuf.get_width();
+            const origHeight = originalPixbuf.get_height();
+
+            // Calculate scale to fill thumbnail (smallest dimension fits)
+            const scaleX = THUMBNAIL_SIZE / origWidth;
+            const scaleY = THUMBNAIL_SIZE / origHeight;
+            const scale = Math.max(scaleX, scaleY);
+
+            const scaledWidth = Math.round(origWidth * scale);
+            const scaledHeight = Math.round(origHeight * scale);
+
+            // Scale the image
+            const scaledPixbuf = originalPixbuf.scale_simple(
+                scaledWidth,
+                scaledHeight,
+                GdkPixbuf.InterpType.BILINEAR
+            );
+
+            // Calculate crop offsets for center crop
+            const cropX = Math.max(0, Math.round((scaledWidth - THUMBNAIL_SIZE) / 2));
+            const cropY = Math.max(0, Math.round((scaledHeight - THUMBNAIL_SIZE) / 2));
+
+            // Crop to exactly thumbnail size from center
+            const croppedPixbuf = scaledPixbuf.new_subpixbuf(
+                cropX,
+                cropY,
+                THUMBNAIL_SIZE,
+                THUMBNAIL_SIZE
             );
 
             const image = new Gtk.Picture();
-            image.set_pixbuf(pixbuf);
+            image.set_pixbuf(croppedPixbuf);
             image.set_can_shrink(false);
 
             const placeholderWidget = placeholder._placeholderWidget;
@@ -228,8 +261,8 @@ var ThumbnailManager = class ThumbnailManager {
 
         const errorLabel = new Gtk.Label({
             label: '❌',
-            width_request: 128,
-            height_request: 128
+            width_request: THUMBNAIL_SIZE,
+            height_request: THUMBNAIL_SIZE
         });
         placeholder.prepend(errorLabel);
     }
