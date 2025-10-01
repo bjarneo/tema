@@ -57,6 +57,33 @@ var TemaTheming = class TemaTheming {
         return null;
     }
 
+    getPywalAccentColor() {
+        try {
+            const pywalColorsPath = GLib.get_home_dir() + '/.cache/wal/colors';
+            const file = Gio.File.new_for_path(pywalColorsPath);
+
+            if (!file.query_exists(null)) {
+                return null;
+            }
+
+            const [success, contents] = file.load_contents(null);
+            if (success) {
+                const text = new TextDecoder().decode(contents);
+                const lines = text.split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line && line.startsWith('#'));
+
+                // color2 is at index 2 (ANSI green)
+                if (lines.length > 2) {
+                    return lines[2];
+                }
+            }
+        } catch (e) {
+            print('Could not read pywal accent color:', e.message);
+        }
+        return null;
+    }
+
     hexToRgba(hex, alpha = 0.95) {
         hex = hex.replace('#', '');
         const r = parseInt(hex.substring(0, 2), 16);
@@ -67,7 +94,9 @@ var TemaTheming = class TemaTheming {
 
     generateDynamicCSS(isDark) {
         const pywalBg = this.getPywalBackgroundColor();
+        const pywalAccent = this.getPywalAccentColor();
         let backgroundColor;
+        let accentColor;
 
         if (pywalBg) {
             backgroundColor = this.hexToRgba(pywalBg, 0.95);
@@ -78,6 +107,14 @@ var TemaTheming = class TemaTheming {
             print('Pywal color not found, using fallback:', backgroundColor);
         }
 
+        if (pywalAccent) {
+            accentColor = pywalAccent;
+            print('Using pywal accent color (color2):', accentColor);
+        } else {
+            accentColor = '#00ff00'; // Fallback green
+            print('Pywal accent color not found, using fallback:', accentColor);
+        }
+
         const boxShadow = isDark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.15)';
 
         return `
@@ -86,6 +123,8 @@ window {
     background-color: ${backgroundColor};
     box-shadow: 0 4px 20px ${boxShadow};
 }
+
+@define-color accent_color ${accentColor};
 `;
     }
 

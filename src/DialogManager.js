@@ -40,8 +40,7 @@ e - Eject selected wallpaper as a standalone theme`
         const dialog = new Adw.MessageDialog({
             transient_for: parent,
             modal: true,
-            heading: 'Choose Theme Mode',
-            body: `Set wallpaper: ${fileName}`
+            heading: 'Choose Theme Mode'
         });
 
         dialog.add_response('dark', 'Dark Mode');
