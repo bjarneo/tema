@@ -404,6 +404,7 @@ var ThemeGenerator = class ThemeGenerator {
 
             // Create backgrounds directory and copy the wallpaper
             const backgroundsDir = Gio.File.new_for_path(outputPath + '/backgrounds');
+
             if (!backgroundsDir.query_exists(null)) {
                 backgroundsDir.make_directory(null);
             }
