@@ -335,6 +335,18 @@ class TemaApp extends Adw.Application {
             title: 'Settings'
         });
 
+        const keyController = new Gtk.EventControllerKey();
+        dialog.add_controller(keyController);
+
+        keyController.connect('key-pressed', (controller, keyval) => {
+            const KEY_ESCAPE = 65307;
+            if (keyval === KEY_ESCAPE) {
+                dialog.close();
+                return true;
+            }
+            return false;
+        });
+
         const headerBar = new Adw.HeaderBar();
         const toolbarView = new Adw.ToolbarView();
         toolbarView.add_top_bar(headerBar);
