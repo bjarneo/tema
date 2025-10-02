@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/li/oever/tema/js">
+    <file>main.js</file>
+    <file>ThumbnailManager.js</file>
+    <file>DialogManager.js</file>
+    <file>ThemeGenerator.js</file>
+    <file>WallpaperManager.js</file>
+    <file>TemaTheming.js</file>
+    <file>style.css</file>
+  </gresource>
+</gresources>

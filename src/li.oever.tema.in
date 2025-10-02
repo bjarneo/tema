@@ -1,0 +1,21 @@
+#!@GJS@
+imports.gi.versions.Gtk = '4.0';
+imports.gi.versions.Adw = '1';
+
+const { Gio } = imports.gi;
+
+// Load the gresource manually
+const gresourcePath = '@prefix@/@datadir@/tema/@PACKAGE_NAME@.src.gresource';
+try {
+    const gresource = Gio.Resource.load(gresourcePath);
+    Gio.resources_register(gresource);
+
+    // Add the gresource path to imports search path
+    imports.searchPath.unshift('resource:///com/bjarneo/Tema/js');
+} catch (e) {
+    print('Warning: Could not load gresource:', e.message);
+}
+
+// Import and run main directly
+const { main } = imports.main;
+main(ARGV);
