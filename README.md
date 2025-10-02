@@ -6,8 +6,6 @@ https://github.com/user-attachments/assets/5f672c3a-e8a5-4ca1-b091-acdb9e5ebb70
 
 A GTK4/Adwaita Omarchy theming application that integrates with pywal for automatic color scheme generation.
 
-> **⚠️ Important:** Tēma requires wallpapers to be placed in `~/Wallpapers/` directory to function. Create this directory and add your wallpaper images before running the application.
-
 ## 🙏 Acknowledgments
 
 This application is built on top of the incredible work by these amazing creators:
@@ -39,10 +37,6 @@ yay -S tema-git
 Tēma is now integrated as an Omarchy theme! The templates are symlinked to `~/.config/omarchy/themes/tema`.
 
 ### Setup with Omarchy
-```bash
-# Copy existing wallpapers from Omarchy themes to get started
-cp ~/.config/omarchy/themes/**/backgrounds/* ~/Wallpapers/
-```
 
 ### Recommended Keybind
 
