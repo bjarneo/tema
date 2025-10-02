@@ -11,7 +11,7 @@ try {
     Gio.resources_register(gresource);
 
     // Add the gresource path to imports search path
-    imports.searchPath.unshift('resource:///com/bjarneo/Tema/js');
+    imports.searchPath.unshift('resource:///li/oever/tema/js');
 } catch (e) {
     print('Warning: Could not load gresource:', e.message);
 }
