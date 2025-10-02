@@ -5,6 +5,27 @@ var DialogManager = class DialogManager {
         this.app = app;
     }
 
+    addVimKeybindings(dialog) {
+        const keyController = new Gtk.EventControllerKey();
+        dialog.add_controller(keyController);
+
+        keyController.connect('key-pressed', (controller, keyval, keycode, state) => {
+            const vimKeyMap = {
+                104: Gtk.DirectionType.LEFT,  // h
+                106: Gtk.DirectionType.DOWN,  // j
+                107: Gtk.DirectionType.UP,    // k
+                108: Gtk.DirectionType.RIGHT  // l
+            };
+
+            if (vimKeyMap[keyval] !== undefined) {
+                dialog.child_focus(vimKeyMap[keyval]);
+                return true;
+            }
+
+            return false;
+        });
+    }
+
     showHelpModal(parent) {
         const dialog = new Adw.MessageDialog({
             transient_for: parent,
@@ -51,6 +72,8 @@ e - Eject selected wallpaper as a standalone theme`
         dialog.set_response_appearance('dark', Adw.ResponseAppearance.SUGGESTED);
         dialog.set_default_response('dark');
         dialog.set_close_response('cancel');
+
+        this.addVimKeybindings(dialog);
 
         dialog.connect('response', (dialog, response) => {
             if (response === 'dark' || response === 'light') {
@@ -113,6 +136,8 @@ e - Eject selected wallpaper as a standalone theme`
         dialog.set_response_appearance('dark', Adw.ResponseAppearance.SUGGESTED);
         dialog.set_default_response('dark');
         dialog.set_close_response('cancel');
+
+        this.addVimKeybindings(dialog);
 
         dialog.connect('response', (dialog, response) => {
             if (response === 'dark' || response === 'light') {
