@@ -100,6 +100,16 @@ class TemaApp extends Adw.Application {
 
         window.set_content(mainBox);
         window.present();
+
+        // Focus first image after window is presented
+        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            const firstChild = grid.get_first_child();
+            if (firstChild) {
+                grid.select_child(firstChild);
+                grid.grab_focus();
+            }
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
     initializeWallpapersDirectory() {
@@ -274,13 +284,15 @@ class TemaApp extends Adw.Application {
             margin_top: 8,
             margin_bottom: 8,
             margin_start: 12,
-            margin_end: 12
+            margin_end: 12,
+            can_focus: false
         });
 
         const titleButton = new Gtk.Button({
             label: 'Tēma',
             has_frame: false,
-            css_classes: ['flat']
+            css_classes: ['flat'],
+            focus_on_click: false
         });
 
         titleButton.connect('clicked', () => {
@@ -290,7 +302,8 @@ class TemaApp extends Adw.Application {
         const settingsButton = new Gtk.Button({
             icon_name: 'emblem-system-symbolic',
             has_frame: false,
-            css_classes: ['flat']
+            css_classes: ['flat'],
+            focus_on_click: false
         });
 
         settingsButton.connect('clicked', () => {
