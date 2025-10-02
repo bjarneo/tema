@@ -42,6 +42,7 @@ class TemaApp extends Adw.Application {
     }
 
     vfunc_activate() {
+        this.initializeWallpapersDirectory();
         this.loadCustomCSS();
         this.temaTheming.applyDynamicTheming();
 
@@ -55,6 +56,114 @@ class TemaApp extends Adw.Application {
 
         window.set_content(mainBox);
         window.present();
+    }
+
+    initializeWallpapersDirectory() {
+        const homeDir = GLib.get_home_dir();
+        const wallpapersDir = Gio.File.new_for_path(homeDir + '/Wallpapers');
+
+        if (!this.createWallpapersDirectory(wallpapersDir)) {
+            return;
+        }
+
+        this.copyOmarchyBackgrounds(homeDir, wallpapersDir);
+    }
+
+    createWallpapersDirectory(wallpapersDir) {
+        if (wallpapersDir.query_exists(null)) {
+            return true;
+        }
+
+        try {
+            wallpapersDir.make_directory_with_parents(null);
+            print('✓ Created Wallpapers directory');
+            return true;
+        } catch (error) {
+            print('Error creating Wallpapers directory:', error.message);
+            return false;
+        }
+    }
+
+    copyOmarchyBackgrounds(homeDir, wallpapersDir) {
+        const themesPath = homeDir + '/.config/omarchy/themes';
+        const themesDir = Gio.File.new_for_path(themesPath);
+
+        if (!themesDir.query_exists(null)) {
+            return;
+        }
+
+        try {
+            const enumerator = themesDir.enumerate_children(
+                'standard::name,standard::type',
+                Gio.FileQueryInfoFlags.NONE,
+                null
+            );
+
+            let fileInfo;
+            while ((fileInfo = enumerator.next_file(null)) !== null) {
+                this.processThemeDirectory(fileInfo, themesPath, wallpapersDir);
+            }
+
+            enumerator.close(null);
+        } catch (error) {
+            print('Error copying omarchy backgrounds:', error.message);
+        }
+    }
+
+    processThemeDirectory(fileInfo, themesPath, wallpapersDir) {
+        if (fileInfo.get_file_type() !== Gio.FileType.DIRECTORY) {
+            return;
+        }
+
+        const themeName = fileInfo.get_name();
+        const backgroundsPath = `${themesPath}/${themeName}/backgrounds`;
+        const backgroundsDir = Gio.File.new_for_path(backgroundsPath);
+
+        if (!backgroundsDir.query_exists(null)) {
+            return;
+        }
+
+        this.copyBackgroundFiles(backgroundsDir, wallpapersDir);
+    }
+
+    copyBackgroundFiles(backgroundsDir, wallpapersDir) {
+        try {
+            const enumerator = backgroundsDir.enumerate_children(
+                'standard::name,standard::type',
+                Gio.FileQueryInfoFlags.NONE,
+                null
+            );
+
+            let fileInfo;
+            while ((fileInfo = enumerator.next_file(null)) !== null) {
+                this.copyBackgroundFile(fileInfo, backgroundsDir, wallpapersDir);
+            }
+
+            enumerator.close(null);
+        } catch (error) {
+            print('Error reading backgrounds directory:', error.message);
+        }
+    }
+
+    copyBackgroundFile(fileInfo, backgroundsDir, wallpapersDir) {
+        if (fileInfo.get_file_type() !== Gio.FileType.REGULAR) {
+            return;
+        }
+
+        const fileName = fileInfo.get_name();
+        const sourceFile = Gio.File.new_for_path(`${backgroundsDir.get_path()}/${fileName}`);
+        const destFile = Gio.File.new_for_path(`${wallpapersDir.get_path()}/${fileName}`);
+
+        if (destFile.query_exists(null)) {
+            return;
+        }
+
+        try {
+            sourceFile.copy(destFile, Gio.FileCopyFlags.NONE, null, null);
+            print('✓ Copied background:', fileName);
+        } catch (error) {
+            print('Error copying', fileName, ':', error.message);
+        }
     }
 
     loadCustomCSS() {
