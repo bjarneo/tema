@@ -17,7 +17,7 @@ message('Data will be installed to: ' + get_option('prefix') / get_option('datad
 # Package configuration
 package_name = 'tema'
 package_tarname = 'tema'
-app_id = 'com.bjarneo.Tema'
+app_id = 'li.oever.tema'
 
 # Dependencies
 dependency('gjs-1.0', version: '>= 1.66')

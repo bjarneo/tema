@@ -22,7 +22,8 @@ try {
     ({ TemaTheming } = imports.TemaTheming);
 }
 
-const APP_ID = 'com.bjarneo.Tema';
+const APP_ID = 'li.oever.tema';
+const SETTINGS_SCHEMA = 'li.oever.tema';
 
 const TemaApp = GObject.registerClass(
 class TemaApp extends Adw.Application {
@@ -31,6 +32,7 @@ class TemaApp extends Adw.Application {
         GLib.set_prgname(APP_ID);
 
         this.initializeManagers();
+        this.loadSettings();
     }
 
     initializeManagers() {
@@ -41,6 +43,46 @@ class TemaApp extends Adw.Application {
         this.temaTheming = new TemaTheming();
     }
 
+    loadSettings() {
+        const homeDir = GLib.get_home_dir();
+        const configDir = homeDir + '/.config/tema';
+        const configFile = Gio.File.new_for_path(configDir + '/settings.json');
+
+        if (!configFile.query_exists(null)) {
+            this.settings = { defaultMode: 'ask' };
+            return;
+        }
+
+        try {
+            const [success, contents] = configFile.load_contents(null);
+            if (success) {
+                const jsonContent = new TextDecoder('utf-8').decode(contents);
+                this.settings = JSON.parse(jsonContent);
+            } else {
+                this.settings = { defaultMode: 'ask' };
+            }
+        } catch (error) {
+            print('Error loading settings:', error.message);
+            this.settings = { defaultMode: 'ask' };
+        }
+    }
+
+    saveSettings() {
+        const homeDir = GLib.get_home_dir();
+        const configDir = homeDir + '/.config/tema';
+        const configDirFile = Gio.File.new_for_path(configDir);
+
+        if (!configDirFile.query_exists(null)) {
+            configDirFile.make_directory_with_parents(null);
+        }
+
+        const configFile = Gio.File.new_for_path(configDir + '/settings.json');
+        const jsonContent = JSON.stringify(this.settings, null, 2);
+        const encodedContent = new TextEncoder('utf-8').encode(jsonContent);
+
+        configFile.replace_contents(encodedContent, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+    }
+
     vfunc_activate() {
         this.initializeWallpapersDirectory();
         this.loadCustomCSS();
@@ -48,8 +90,10 @@ class TemaApp extends Adw.Application {
 
         const window = this.createMainWindow();
         const mainBox = this.createMainContent();
+        const headerBar = this.createHeaderBar();
         const { scrolled, grid } = this.createImageGrid();
 
+        mainBox.append(headerBar);
         mainBox.append(scrolled);
         this.loadWallpaperImages(grid);
         this.setupKeyboardHandling(window, grid);
@@ -192,7 +236,7 @@ class TemaApp extends Adw.Application {
 
     _tryLoadCSSFromResource(cssProvider) {
         try {
-            cssProvider.load_from_resource('/com/bjarneo/Tema/js/style.css');
+            cssProvider.load_from_resource('/li/oever/tema/js/style.css');
             this._applyStyleProvider(cssProvider);
             print('✓ Custom CSS loaded from gresource');
         } catch (error) {
@@ -221,6 +265,121 @@ class TemaApp extends Adw.Application {
             orientation: Gtk.Orientation.VERTICAL,
             spacing: 0
         });
+    }
+
+    createHeaderBar() {
+        const headerBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 0,
+            margin_top: 8,
+            margin_bottom: 8,
+            margin_start: 12,
+            margin_end: 12
+        });
+
+        const titleButton = new Gtk.Button({
+            label: 'Tēma',
+            has_frame: false,
+            css_classes: ['flat']
+        });
+
+        titleButton.connect('clicked', () => {
+            this._openGitHubRepo();
+        });
+
+        const settingsButton = new Gtk.Button({
+            icon_name: 'emblem-system-symbolic',
+            has_frame: false,
+            css_classes: ['flat']
+        });
+
+        settingsButton.connect('clicked', () => {
+            this._showSettingsPanel();
+        });
+
+        headerBox.append(titleButton);
+        headerBox.append(new Gtk.Box({ hexpand: true }));
+        headerBox.append(settingsButton);
+
+        return headerBox;
+    }
+
+    _openGitHubRepo() {
+        try {
+            Gtk.show_uri(null, 'https://github.com/bjarneo/tema', Gdk.CURRENT_TIME);
+        } catch (error) {
+            print('Error opening GitHub URL:', error.message);
+        }
+    }
+
+    _showSettingsPanel() {
+        const window = this.get_active_window();
+        const dialog = new Adw.Window({
+            transient_for: window,
+            modal: true,
+            default_width: 400,
+            default_height: 300,
+            title: 'Settings'
+        });
+
+        const headerBar = new Adw.HeaderBar();
+        const toolbarView = new Adw.ToolbarView();
+        toolbarView.add_top_bar(headerBar);
+
+        const contentBox = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 12,
+            margin_top: 24,
+            margin_bottom: 24,
+            margin_start: 24,
+            margin_end: 24
+        });
+
+        const modeLabel = new Gtk.Label({
+            label: 'Default Wallpaper Mode',
+            xalign: 0,
+            css_classes: ['title-4']
+        });
+
+        const modeRow = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12,
+            margin_top: 12
+        });
+
+        const modeDropDown = new Gtk.DropDown({
+            model: Gtk.StringList.new(['Ask Every Time', 'Always Dark', 'Always Light']),
+            hexpand: true
+        });
+
+        const modeMap = {
+            'ask': 0,
+            'dark': 1,
+            'light': 2
+        };
+
+        const reverseModeMap = {
+            0: 'ask',
+            1: 'dark',
+            2: 'light'
+        };
+
+        modeDropDown.set_selected(modeMap[this.settings.defaultMode] || 0);
+
+        modeDropDown.connect('notify::selected', () => {
+            const selected = modeDropDown.get_selected();
+            this.settings.defaultMode = reverseModeMap[selected];
+            this.saveSettings();
+        });
+
+        modeRow.append(modeDropDown);
+
+        contentBox.append(modeLabel);
+        contentBox.append(modeRow);
+
+        toolbarView.set_content(contentBox);
+        dialog.set_content(toolbarView);
+        dialog.present();
     }
 
     createImageGrid() {
@@ -411,6 +570,17 @@ class TemaApp extends Adw.Application {
 
     handleWallpaperSelection(filePath, fileName) {
         const window = this.get_active_window();
+
+        if (this.settings.defaultMode === 'dark') {
+            this.setWallpaper(filePath, fileName, false);
+            return;
+        }
+
+        if (this.settings.defaultMode === 'light') {
+            this.setWallpaper(filePath, fileName, true);
+            return;
+        }
+
         this.dialogManager.showModeDialog(
             window,
             filePath,

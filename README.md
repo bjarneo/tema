@@ -128,10 +128,10 @@ To make Tēma appear in your application menu without full installation:
 
 ```bash
 # Copy desktop file for current user
-cp data/com.bjarneo.Tema.desktop ~/.local/share/applications/
+cp data/li.oever.tema.desktop ~/.local/share/applications/
 
 # Edit the desktop file to point to your local copy
-sed -i "s|Exec=tema|Exec=$(pwd)/init.js|" ~/.local/share/applications/com.bjarneo.Tema.desktop
+sed -i "s|Exec=tema|Exec=$(pwd)/init.js|" ~/.local/share/applications/li.oever.tema.desktop
 ```
 
 ## Dependencies (Arch Linux)
@@ -207,7 +207,7 @@ This creates a complete, shareable theme package that can be used with Omarchy o
 
 The AUR package follows the [GJS packaging specification](https://gjs.guide/guides/gtk/gtk4.html#packaging) and includes:
 
-- **Standard compliant structure**: Uses proper DBus naming (`com.bjarneo.Tema`)
+- **Standard compliant structure**: Uses proper DBus naming (`li.oever.tema`)
 - **GResource bundling**: All JavaScript modules (main.js, ThumbnailManager.js, DialogManager.js, ThemeGenerator.js, WallpaperManager.js) bundled for efficiency
 - **Template installation**: Theme templates installed to `/usr/share/tema/templates/`
 - **Desktop integration**: Proper desktop file and symlinks
