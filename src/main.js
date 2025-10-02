@@ -324,6 +324,19 @@ class TemaApp extends Adw.Application {
     }
 
     handleKeyPress(keyval, window, grid) {
+        // Vim bindings - convert hjkl to arrow keys
+        const vimKeyMap = {
+            104: Gtk.DirectionType.LEFT,  // h
+            106: Gtk.DirectionType.DOWN,  // j
+            107: Gtk.DirectionType.UP,    // k
+            108: Gtk.DirectionType.RIGHT  // l
+        };
+
+        if (vimKeyMap[keyval] !== undefined) {
+            grid.child_focus(vimKeyMap[keyval]);
+            return true;
+        }
+
         switch (keyval) {
             case 65293: // Enter key
                 return this.handleEnterKey(grid, window);

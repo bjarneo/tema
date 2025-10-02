@@ -12,6 +12,7 @@ var DialogManager = class DialogManager {
             heading: 'Keyboard Shortcuts',
             body: `Navigation:
 Arrow keys - Navigate through wallpapers
+h, j, k, l - Vim-style navigation (left, down, up, right)
 Enter - Set selected wallpaper
 Tab - Move focus between UI elements
 
