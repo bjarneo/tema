@@ -1,5 +1,12 @@
 const { Adw, Gtk } = imports.gi;
 
+const VIM_KEY_MAP = {
+    104: Gtk.DirectionType.LEFT,  // h
+    106: Gtk.DirectionType.DOWN,  // j
+    107: Gtk.DirectionType.UP,    // k
+    108: Gtk.DirectionType.RIGHT  // l
+};
+
 var DialogManager = class DialogManager {
     constructor(app) {
         this.app = app;
@@ -9,21 +16,20 @@ var DialogManager = class DialogManager {
         const keyController = new Gtk.EventControllerKey();
         dialog.add_controller(keyController);
 
-        keyController.connect('key-pressed', (controller, keyval, keycode, state) => {
-            const vimKeyMap = {
-                104: Gtk.DirectionType.LEFT,  // h
-                106: Gtk.DirectionType.DOWN,  // j
-                107: Gtk.DirectionType.UP,    // k
-                108: Gtk.DirectionType.RIGHT  // l
-            };
-
-            if (vimKeyMap[keyval] !== undefined) {
-                dialog.child_focus(vimKeyMap[keyval]);
-                return true;
-            }
-
-            return false;
+        keyController.connect('key-pressed', (controller, keyval) => {
+            return this._handleVimKey(dialog, keyval);
         });
+    }
+
+    _handleVimKey(dialog, keyval) {
+        const direction = VIM_KEY_MAP[keyval];
+
+        if (direction === undefined) {
+            return false;
+        }
+
+        dialog.child_focus(direction);
+        return true;
     }
 
     showHelpModal(parent) {
@@ -87,41 +93,45 @@ e - Eject selected wallpaper as a standalone theme`
 
     showError(message, parent = null) {
         print(`Error: ${message}`);
-
-        const window = parent || this.app.get_active_window();
-        if (window) {
-            const dialog = new Adw.MessageDialog({
-                transient_for: window,
-                modal: true,
-                heading: 'Error',
-                body: message
-            });
-            dialog.add_response('ok', 'OK');
-            dialog.set_default_response('ok');
-            dialog.connect('response', () => dialog.destroy());
-            dialog.present();
-        }
+        this._showMessageDialog('Error', message, parent);
     }
 
     showSuccess(message, parent = null) {
         print(`Success: ${message}`);
+        this._showMessageDialog('Success', message, parent);
+    }
 
+    _showMessageDialog(heading, message, parent = null) {
         const window = parent || this.app.get_active_window();
-        if (window) {
-            const dialog = new Adw.MessageDialog({
-                transient_for: window,
-                modal: true,
-                heading: 'Success',
-                body: message
-            });
-            dialog.add_response('ok', 'OK');
-            dialog.set_default_response('ok');
-            dialog.connect('response', () => dialog.destroy());
-            dialog.present();
+
+        if (!window) {
+            return;
         }
+
+        const dialog = new Adw.MessageDialog({
+            transient_for: window,
+            modal: true,
+            heading: heading,
+            body: message
+        });
+
+        dialog.add_response('ok', 'OK');
+        dialog.set_default_response('ok');
+        dialog.connect('response', () => dialog.destroy());
+        dialog.present();
     }
 
     showThemeEjectionDialog(parent, filePath, fileName, callback) {
+        const dialog = this._createThemeEjectionDialog(parent, fileName);
+
+        dialog.connect('response', (dialog, response) => {
+            this._handleThemeEjectionResponse(dialog, response, parent, filePath, fileName, callback);
+        });
+
+        dialog.present();
+    }
+
+    _createThemeEjectionDialog(parent, fileName) {
         const dialog = new Adw.MessageDialog({
             transient_for: parent,
             modal: true,
@@ -139,24 +149,23 @@ e - Eject selected wallpaper as a standalone theme`
 
         this.addVimKeybindings(dialog);
 
-        dialog.connect('response', (dialog, response) => {
-            if (response === 'dark' || response === 'light') {
-                const isLight = response === 'light';
-                dialog.destroy();
-                this.showPathSelectionDialog(parent, filePath, fileName, isLight, callback);
-            } else {
-                dialog.destroy();
-            }
-        });
-
-        dialog.present();
+        return dialog;
     }
 
-    showPathSelectionDialog(parent, filePath, fileName, isLight, callback) {
+    _handleThemeEjectionResponse(dialog, response, parent, filePath, fileName, callback) {
+        if (response !== 'dark' && response !== 'light') {
+            dialog.destroy();
+            return;
+        }
+
+        const isLight = response === 'light';
+        dialog.destroy();
+        this._showPathSelectionDialog(parent, filePath, fileName, isLight, callback);
+    }
+
+    _showPathSelectionDialog(parent, filePath, fileName, isLight, callback) {
         const { GLib } = imports.gi;
-        const homeDir = GLib.get_home_dir();
-        const themeName = fileName.replace(/\.[^.]+$/, '');
-        const defaultPath = `${homeDir}/omarchy-${themeName}-theme`;
+        const defaultPath = this._getDefaultThemePath(fileName);
 
         const dialog = new Adw.MessageDialog({
             transient_for: parent,
@@ -165,7 +174,29 @@ e - Eject selected wallpaper as a standalone theme`
             body: 'Enter the path where the theme should be created:'
         });
 
-        const entry = new Gtk.Entry({
+        const entry = this._createPathEntry(defaultPath);
+        const box = this._createEntryContainer(entry);
+        dialog.set_extra_child(box);
+
+        this._configurePathDialogResponses(dialog);
+
+        dialog.connect('response', (dialog, response) => {
+            this._handlePathSelectionResponse(dialog, response, entry, filePath, fileName, isLight, callback);
+        });
+
+        dialog.present();
+        entry.grab_focus();
+    }
+
+    _getDefaultThemePath(fileName) {
+        const { GLib } = imports.gi;
+        const homeDir = GLib.get_home_dir();
+        const themeName = fileName.replace(/\.[^.]+$/, '');
+        return `${homeDir}/omarchy-${themeName}-theme`;
+    }
+
+    _createPathEntry(defaultPath) {
+        return new Gtk.Entry({
             text: defaultPath,
             hexpand: true,
             margin_top: 12,
@@ -173,30 +204,30 @@ e - Eject selected wallpaper as a standalone theme`
             margin_start: 12,
             margin_end: 12
         });
+    }
 
+    _createEntryContainer(entry) {
         const box = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
             spacing: 6
         });
         box.append(entry);
-        dialog.set_extra_child(box);
+        return box;
+    }
 
+    _configurePathDialogResponses(dialog) {
         dialog.add_response('create', 'Create Theme');
         dialog.add_response('cancel', 'Cancel');
-
         dialog.set_response_appearance('create', Adw.ResponseAppearance.SUGGESTED);
         dialog.set_default_response('create');
         dialog.set_close_response('cancel');
+    }
 
-        dialog.connect('response', (dialog, response) => {
-            if (response === 'create') {
-                const outputPath = entry.get_text();
-                callback(filePath, fileName, isLight, outputPath);
-            }
-            dialog.destroy();
-        });
-
-        dialog.present();
-        entry.grab_focus();
+    _handlePathSelectionResponse(dialog, response, entry, filePath, fileName, isLight, callback) {
+        if (response === 'create') {
+            const outputPath = entry.get_text();
+            callback(filePath, fileName, isLight, outputPath);
+        }
+        dialog.destroy();
     }
 };

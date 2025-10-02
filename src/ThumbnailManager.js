@@ -1,6 +1,7 @@
 const { Gtk, GLib, Gio, GdkPixbuf } = imports.gi;
 
 const THUMBNAIL_SIZE = 92;
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff'];
 
 var ThumbnailManager = class ThumbnailManager {
     constructor() {
@@ -9,22 +10,29 @@ var ThumbnailManager = class ThumbnailManager {
     }
 
     ensureCacheDirectory() {
-        if (this.cacheDir) return this.cacheDir;
-
-        this.cacheDir = GLib.get_home_dir() + '/.cache/tema/thumbnails';
-        const cacheDirFile = Gio.File.new_for_path(this.cacheDir);
-
-        if (!cacheDirFile.query_exists(null)) {
-            try {
-                cacheDirFile.make_directory_with_parents(null);
-                print('✓ Created thumbnail cache directory:', this.cacheDir);
-            } catch (error) {
-                print('Error creating cache directory:', error.message);
-                throw error;
-            }
+        if (this.cacheDir) {
+            return this.cacheDir;
         }
 
+        this.cacheDir = GLib.get_home_dir() + '/.cache/tema/thumbnails';
+        this._createCacheDirectoryIfNeeded();
         return this.cacheDir;
+    }
+
+    _createCacheDirectoryIfNeeded() {
+        const cacheDirFile = Gio.File.new_for_path(this.cacheDir);
+
+        if (cacheDirFile.query_exists(null)) {
+            return;
+        }
+
+        try {
+            cacheDirFile.make_directory_with_parents(null);
+            print('✓ Created thumbnail cache directory:', this.cacheDir);
+        } catch (error) {
+            print('Error creating cache directory:', error.message);
+            throw error;
+        }
     }
 
     getThumbnailPath(filePath) {
@@ -45,37 +53,45 @@ var ThumbnailManager = class ThumbnailManager {
     }
 
     createPlaceholder(grid, filePath, fileName) {
-        let placeholderWidget;
+        const placeholderWidget = this._createPlaceholderWidget();
+        const box = this._createThumbnailBox(placeholderWidget, filePath, fileName);
+        grid.append(box);
+        return box;
+    }
 
-        try {
-            const placeholderPath = GLib.get_current_dir() + '/placeholder.png';
-            const placeholderFile = Gio.File.new_for_path(placeholderPath);
+    _createPlaceholderWidget() {
+        const placeholderPath = GLib.get_current_dir() + '/placeholder.png';
+        const placeholderFile = Gio.File.new_for_path(placeholderPath);
 
-            if (placeholderFile.query_exists(null)) {
-                const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                    placeholderPath,
-                    THUMBNAIL_SIZE,
-                    THUMBNAIL_SIZE,
-                    true
-                );
-                placeholderWidget = new Gtk.Picture();
-                placeholderWidget.set_pixbuf(pixbuf);
-                placeholderWidget.set_can_shrink(false);
-            } else {
-                placeholderWidget = new Gtk.Spinner({
-                    spinning: true,
-                    width_request: THUMBNAIL_SIZE,
-                    height_request: THUMBNAIL_SIZE
-                });
-            }
-        } catch (error) {
-            placeholderWidget = new Gtk.Spinner({
-                spinning: true,
-                width_request: THUMBNAIL_SIZE,
-                height_request: THUMBNAIL_SIZE
-            });
+        if (!placeholderFile.query_exists(null)) {
+            return this._createSpinnerWidget();
         }
 
+        try {
+            const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
+                placeholderPath,
+                THUMBNAIL_SIZE,
+                THUMBNAIL_SIZE,
+                true
+            );
+            const picture = new Gtk.Picture();
+            picture.set_pixbuf(pixbuf);
+            picture.set_can_shrink(false);
+            return picture;
+        } catch (error) {
+            return this._createSpinnerWidget();
+        }
+    }
+
+    _createSpinnerWidget() {
+        return new Gtk.Spinner({
+            spinning: true,
+            width_request: THUMBNAIL_SIZE,
+            height_request: THUMBNAIL_SIZE
+        });
+    }
+
+    _createThumbnailBox(placeholderWidget, filePath, fileName) {
         const box = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
             spacing: 6,
@@ -90,24 +106,19 @@ var ThumbnailManager = class ThumbnailManager {
         box._fileName = fileName;
         box._placeholderWidget = placeholderWidget;
 
-        grid.append(box);
         return box;
     }
 
     loadThumbnailForPlaceholder(placeholder, filePath, fileName) {
-        try {
-            const thumbnailPath = this.getThumbnailPath(filePath);
-            const thumbnailFile = Gio.File.new_for_path(thumbnailPath);
+        const thumbnailPath = this.getThumbnailPath(filePath);
+        const thumbnailFile = Gio.File.new_for_path(thumbnailPath);
 
-            if (thumbnailFile.query_exists(null)) {
-                this.loadCachedThumbnail(placeholder, thumbnailPath);
-            } else {
-                this.generateThumbnail(placeholder, filePath, thumbnailPath, fileName);
-            }
-        } catch (error) {
-            print(`Error loading image ${fileName}:`, error.message);
-            this.showThumbnailError(placeholder);
+        if (thumbnailFile.query_exists(null)) {
+            this._loadCachedThumbnail(placeholder, thumbnailPath);
+            return;
         }
+
+        this._generateThumbnail(placeholder, filePath, thumbnailPath, fileName);
     }
 
     checkImageMagick(callback) {
@@ -139,24 +150,19 @@ var ThumbnailManager = class ThumbnailManager {
         }
     }
 
-    generateThumbnail(placeholder, filePath, thumbnailPath, fileName) {
-        try {
-            this.ensureCacheDirectory();
+    _generateThumbnail(placeholder, filePath, thumbnailPath, fileName) {
+        this.ensureCacheDirectory();
 
-            this.checkImageMagick((available) => {
-                if (available) {
-                    this.generateThumbnailWithImageMagick(placeholder, filePath, thumbnailPath);
-                } else {
-                    this.generateThumbnailFallback(placeholder, filePath, fileName);
-                }
-            });
-        } catch (error) {
-            print(`Error generating thumbnail for ${fileName}:`, error.message);
-            this.showThumbnailError(placeholder);
-        }
+        this.checkImageMagick((available) => {
+            if (available) {
+                this._generateThumbnailWithImageMagick(placeholder, filePath, thumbnailPath);
+            } else {
+                this._generateThumbnailFallback(placeholder, filePath, fileName);
+            }
+        });
     }
 
-    generateThumbnailWithImageMagick(placeholder, filePath, thumbnailPath) {
+    _generateThumbnailWithImageMagick(placeholder, filePath, thumbnailPath) {
         try {
             const subprocess = new Gio.Subprocess({
                 argv: [
@@ -171,91 +177,88 @@ var ThumbnailManager = class ThumbnailManager {
             subprocess.init(null);
 
             subprocess.communicate_utf8_async(null, null, (source, result) => {
-                try {
-                    const [, , stderr] = subprocess.communicate_utf8_finish(result);
-
-                    if (subprocess.get_successful()) {
-                        this.loadCachedThumbnail(placeholder, thumbnailPath);
-                    } else {
-                        print('ImageMagick error:', stderr);
-                        this.generateThumbnailFallback(placeholder, filePath, 'unknown');
-                    }
-                } catch (error) {
-                    print('Error with ImageMagick process:', error.message);
-                    this.generateThumbnailFallback(placeholder, filePath, 'unknown');
-                }
+                this._handleImageMagickResult(subprocess, result, placeholder, filePath, thumbnailPath);
             });
         } catch (error) {
             print('Error starting ImageMagick:', error.message);
-            this.generateThumbnailFallback(placeholder, filePath, 'unknown');
+            this._generateThumbnailFallback(placeholder, filePath, 'unknown');
         }
     }
 
-    generateThumbnailFallback(placeholder, filePath, fileName) {
+    _handleImageMagickResult(subprocess, result, placeholder, filePath, thumbnailPath) {
         try {
-            // Load the original image to get dimensions
+            const [, , stderr] = subprocess.communicate_utf8_finish(result);
+
+            if (subprocess.get_successful()) {
+                this._loadCachedThumbnail(placeholder, thumbnailPath);
+            } else {
+                print('ImageMagick error:', stderr);
+                this._generateThumbnailFallback(placeholder, filePath, 'unknown');
+            }
+        } catch (error) {
+            print('Error with ImageMagick process:', error.message);
+            this._generateThumbnailFallback(placeholder, filePath, 'unknown');
+        }
+    }
+
+    _generateThumbnailFallback(placeholder, filePath, fileName) {
+        try {
             const originalPixbuf = GdkPixbuf.Pixbuf.new_from_file(filePath);
-            const origWidth = originalPixbuf.get_width();
-            const origHeight = originalPixbuf.get_height();
+            const scaledPixbuf = this._scalePixbufToFill(originalPixbuf);
+            const croppedPixbuf = this._cropPixbufToCenter(scaledPixbuf);
 
-            // Calculate scale to fill thumbnail (smallest dimension fits)
-            const scaleX = THUMBNAIL_SIZE / origWidth;
-            const scaleY = THUMBNAIL_SIZE / origHeight;
-            const scale = Math.max(scaleX, scaleY);
-
-            const scaledWidth = Math.round(origWidth * scale);
-            const scaledHeight = Math.round(origHeight * scale);
-
-            // Scale the image
-            const scaledPixbuf = originalPixbuf.scale_simple(
-                scaledWidth,
-                scaledHeight,
-                GdkPixbuf.InterpType.BILINEAR
-            );
-
-            // Calculate crop offsets for center crop
-            const cropX = Math.max(0, Math.round((scaledWidth - THUMBNAIL_SIZE) / 2));
-            const cropY = Math.max(0, Math.round((scaledHeight - THUMBNAIL_SIZE) / 2));
-
-            // Crop to exactly thumbnail size from center
-            const croppedPixbuf = scaledPixbuf.new_subpixbuf(
-                cropX,
-                cropY,
-                THUMBNAIL_SIZE,
-                THUMBNAIL_SIZE
-            );
-
-            const image = new Gtk.Picture();
-            image.set_pixbuf(croppedPixbuf);
-            image.set_can_shrink(false);
-
-            const placeholderWidget = placeholder._placeholderWidget;
-            placeholder.remove(placeholderWidget);
-            placeholder.prepend(image);
+            this._replacePlaceholderWithImage(placeholder, croppedPixbuf);
         } catch (error) {
             print(`Error in fallback thumbnail generation for ${fileName}:`, error.message);
-            this.showThumbnailError(placeholder);
+            this._showThumbnailError(placeholder);
         }
     }
 
-    loadCachedThumbnail(placeholder, thumbnailPath) {
+    _scalePixbufToFill(pixbuf) {
+        const origWidth = pixbuf.get_width();
+        const origHeight = pixbuf.get_height();
+
+        const scaleX = THUMBNAIL_SIZE / origWidth;
+        const scaleY = THUMBNAIL_SIZE / origHeight;
+        const scale = Math.max(scaleX, scaleY);
+
+        const scaledWidth = Math.round(origWidth * scale);
+        const scaledHeight = Math.round(origHeight * scale);
+
+        return pixbuf.scale_simple(scaledWidth, scaledHeight, GdkPixbuf.InterpType.BILINEAR);
+    }
+
+    _cropPixbufToCenter(pixbuf) {
+        const width = pixbuf.get_width();
+        const height = pixbuf.get_height();
+
+        const cropX = Math.max(0, Math.round((width - THUMBNAIL_SIZE) / 2));
+        const cropY = Math.max(0, Math.round((height - THUMBNAIL_SIZE) / 2));
+
+        return pixbuf.new_subpixbuf(cropX, cropY, THUMBNAIL_SIZE, THUMBNAIL_SIZE);
+    }
+
+    _replacePlaceholderWithImage(placeholder, pixbuf) {
+        const image = new Gtk.Picture();
+        image.set_pixbuf(pixbuf);
+        image.set_can_shrink(false);
+
+        const placeholderWidget = placeholder._placeholderWidget;
+        placeholder.remove(placeholderWidget);
+        placeholder.prepend(image);
+    }
+
+    _loadCachedThumbnail(placeholder, thumbnailPath) {
         try {
             const pixbuf = GdkPixbuf.Pixbuf.new_from_file(thumbnailPath);
-
-            const image = new Gtk.Picture();
-            image.set_pixbuf(pixbuf);
-            image.set_can_shrink(false);
-
-            const placeholderWidget = placeholder._placeholderWidget;
-            placeholder.remove(placeholderWidget);
-            placeholder.prepend(image);
+            this._replacePlaceholderWithImage(placeholder, pixbuf);
         } catch (error) {
             print('Error loading cached thumbnail:', error.message);
-            this.showThumbnailError(placeholder);
+            this._showThumbnailError(placeholder);
         }
     }
 
-    showThumbnailError(placeholder) {
+    _showThumbnailError(placeholder) {
         const placeholderWidget = placeholder._placeholderWidget;
         placeholder.remove(placeholderWidget);
 
@@ -288,8 +291,7 @@ var ThumbnailManager = class ThumbnailManager {
     }
 
     isImageFile(fileName) {
-        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff'];
         const lowerFileName = fileName.toLowerCase();
-        return imageExtensions.some(ext => lowerFileName.endsWith(ext));
+        return IMAGE_EXTENSIONS.some(ext => lowerFileName.endsWith(ext));
     }
 };

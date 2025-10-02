@@ -1,83 +1,95 @@
 const { GLib, Gio } = imports.gi;
 
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff'];
+const LUMINANCE_LIGHT_THRESHOLD = 0.5;
+
 var ThemeGenerator = class ThemeGenerator {
     constructor(app) {
         this.app = app;
     }
 
     generateTemplates() {
-        try {
-            print('Generating templates with pywal colors...');
+        print('Generating templates with pywal colors...');
 
-            const colors = this.readPywalColors();
-            if (!colors) {
-                print('Error: Could not read pywal colors');
-                return;
-            }
-
-            const homeDir = GLib.get_home_dir();
-            const configBase = homeDir + '/.config';
-            const templatesDir = this.findTemplatesDirectory();
-
-            if (!templatesDir) {
-                const possibleDirs = this.getTemplatePaths();
-                this.app.showError(`Templates directory not found!\nChecked paths:\n${possibleDirs.join('\n')}`);
-                return;
-            }
-
-            const temaThemeDir = configBase + '/omarchy/themes/tema';
-
-            print('Templates directory:', templatesDir);
-            print('Tema theme directory:', temaThemeDir);
-
-            this.processTemplates(templatesDir, temaThemeDir, colors);
-            this.copyStaticFiles(templatesDir, temaThemeDir);
-            this.handleLightMode(colors, temaThemeDir);
-            this.symlinkWallpapers(homeDir, temaThemeDir);
-            this.applyOmarchyTheme();
-            this.setOmarchyBackground(colors, configBase);
-
-            print('✓ Template generation complete!');
-
-            // Apply dynamic theming after theme is set successfully
-            this.app.temaTheming.applyDynamicTheming();
-        } catch (error) {
-            print('Error in template generation:', error.message);
+        const colors = this.readPywalColors();
+        if (!colors) {
+            print('Error: Could not read pywal colors');
+            return;
         }
+
+        const templatesDir = this.findTemplatesDirectory();
+        if (!templatesDir) {
+            this._showTemplatesNotFoundError();
+            return;
+        }
+
+        const homeDir = GLib.get_home_dir();
+        const configBase = homeDir + '/.config';
+        const temaThemeDir = configBase + '/omarchy/themes/tema';
+
+        print('Templates directory:', templatesDir);
+        print('Tema theme directory:', temaThemeDir);
+
+        this._processAllTemplates(templatesDir, temaThemeDir, colors);
+        this._finalizeTheme(homeDir, configBase, temaThemeDir, colors);
+
+        print('✓ Template generation complete!');
+        this.app.temaTheming.applyDynamicTheming();
+    }
+
+    _showTemplatesNotFoundError() {
+        const possibleDirs = this.getTemplatePaths();
+        this.app.showError(`Templates directory not found!\nChecked paths:\n${possibleDirs.join('\n')}`);
+    }
+
+    _processAllTemplates(templatesDir, temaThemeDir, colors) {
+        this.processTemplates(templatesDir, temaThemeDir, colors);
+        this.copyStaticFiles(templatesDir, temaThemeDir);
+        this.handleLightMode(colors, temaThemeDir);
+    }
+
+    _finalizeTheme(homeDir, configBase, temaThemeDir, colors) {
+        this.symlinkWallpapers(homeDir, temaThemeDir);
+        this.applyOmarchyTheme();
+        this.setOmarchyBackground(colors, configBase);
     }
 
     readPywalColors() {
-        try {
-            const colorsFile = Gio.File.new_for_path(GLib.get_home_dir() + '/.cache/wal/colors.json');
-            if (!colorsFile.query_exists(null)) {
-                return null;
-            }
+        const colorsFile = Gio.File.new_for_path(GLib.get_home_dir() + '/.cache/wal/colors.json');
 
+        if (!colorsFile.query_exists(null)) {
+            return null;
+        }
+
+        try {
             const [success, content] = colorsFile.load_contents(null);
             if (!success) {
                 return null;
             }
 
-            const decoder = new TextDecoder('utf-8');
-            const jsonContent = decoder.decode(content);
+            const jsonContent = new TextDecoder('utf-8').decode(content);
             const data = JSON.parse(jsonContent);
 
-            const colors = {
-                background: data.special.background,
-                foreground: data.special.foreground,
-                cursor: data.special.cursor,
-                wallpaper: data.wallpaper
-            };
-
-            for (let i = 0; i < 16; i++) {
-                colors[`color${i}`] = data.colors[`color${i}`];
-            }
-
-            return colors;
+            return this._buildColorsObject(data);
         } catch (error) {
             print('Error reading pywal colors:', error.message);
             return null;
         }
+    }
+
+    _buildColorsObject(data) {
+        const colors = {
+            background: data.special.background,
+            foreground: data.special.foreground,
+            cursor: data.special.cursor,
+            wallpaper: data.wallpaper
+        };
+
+        for (let i = 0; i < 16; i++) {
+            colors[`color${i}`] = data.colors[`color${i}`];
+        }
+
+        return colors;
     }
 
     findTemplatesDirectory() {
@@ -134,46 +146,56 @@ var ThemeGenerator = class ThemeGenerator {
     }
 
     processTemplate(templatePath, outputPath, colors) {
+        const templateFile = Gio.File.new_for_path(templatePath);
+        const [success, content] = templateFile.load_contents(null);
+
+        if (!success) {
+            print('Error reading template:', templatePath);
+            return;
+        }
+
         try {
-            const templateFile = Gio.File.new_for_path(templatePath);
-            const [success, content] = templateFile.load_contents(null);
-            if (!success) {
-                print('Error reading template:', templatePath);
-                return;
-            }
-
-            const decoder = new TextDecoder('utf-8');
-            let templateContent = decoder.decode(content);
-
-            for (const [key, value] of Object.entries(colors)) {
-                templateContent = templateContent.replace(
-                    new RegExp(`\\{${key}\\.strip\\}`, 'g'),
-                    value.replace('#', '')
-                );
-                templateContent = templateContent.replace(
-                    new RegExp(`\\{${key}\\.rgb\\}`, 'g'),
-                    this.hexToRgb(value)
-                );
-                templateContent = templateContent.replace(
-                    new RegExp(`\\{${key}\\}`, 'g'),
-                    value
-                );
-            }
-
-            const outputFile = Gio.File.new_for_path(outputPath);
-            const outputDir = outputFile.get_parent();
-            if (!outputDir.query_exists(null)) {
-                outputDir.make_directory_with_parents(null);
-            }
-
-            const encoder = new TextEncoder('utf-8');
-            const encodedContent = encoder.encode(templateContent);
-            outputFile.replace_contents(encodedContent, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+            const templateContent = new TextDecoder('utf-8').decode(content);
+            const processedContent = this._replaceColorPlaceholders(templateContent, colors);
+            this._writeOutputFile(outputPath, processedContent);
 
             print('✓ Generated:', outputPath);
         } catch (error) {
             print('Error processing template:', templatePath, error.message);
         }
+    }
+
+    _replaceColorPlaceholders(templateContent, colors) {
+        let content = templateContent;
+
+        for (const [key, value] of Object.entries(colors)) {
+            content = content.replace(
+                new RegExp(`\\{${key}\\.strip\\}`, 'g'),
+                value.replace('#', '')
+            );
+            content = content.replace(
+                new RegExp(`\\{${key}\\.rgb\\}`, 'g'),
+                this.hexToRgb(value)
+            );
+            content = content.replace(
+                new RegExp(`\\{${key}\\}`, 'g'),
+                value
+            );
+        }
+
+        return content;
+    }
+
+    _writeOutputFile(outputPath, content) {
+        const outputFile = Gio.File.new_for_path(outputPath);
+        const outputDir = outputFile.get_parent();
+
+        if (!outputDir.query_exists(null)) {
+            outputDir.make_directory_with_parents(null);
+        }
+
+        const encodedContent = new TextEncoder('utf-8').encode(content);
+        outputFile.replace_contents(encodedContent, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
     }
 
     copyStaticFiles(templatesDir, temaThemeDir) {
@@ -195,93 +217,134 @@ var ThemeGenerator = class ThemeGenerator {
     }
 
     handleLightMode(colors, temaThemeDir) {
+        const isLightMode = this._isLightMode(colors.background);
+        const lightModeFile = Gio.File.new_for_path(temaThemeDir + '/light.mode');
+
+        if (isLightMode) {
+            this._createLightModeFile(lightModeFile);
+        } else {
+            this._removeLightModeFile(lightModeFile);
+        }
+    }
+
+    _isLightMode(backgroundColor) {
+        const r = parseInt(backgroundColor.substring(1, 3), 16);
+        const g = parseInt(backgroundColor.substring(3, 5), 16);
+        const b = parseInt(backgroundColor.substring(5, 7), 16);
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+        return luminance > LUMINANCE_LIGHT_THRESHOLD;
+    }
+
+    _createLightModeFile(lightModeFile) {
         try {
-            const bg = colors.background;
-            const r = parseInt(bg.substring(1, 3), 16);
-            const g = parseInt(bg.substring(3, 5), 16);
-            const b = parseInt(bg.substring(5, 7), 16);
-            const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-            const lightModeFile = Gio.File.new_for_path(temaThemeDir + '/light.mode');
-
-            if (luminance > 0.5) {
-                lightModeFile.create(Gio.FileCreateFlags.NONE, null);
-                print('✓ Light mode detected - created light.mode file');
-            } else {
-                if (lightModeFile.query_exists(null)) {
-                    lightModeFile.delete(null);
-                    print('✓ Dark mode detected - removed light.mode file');
-                }
-            }
+            lightModeFile.create(Gio.FileCreateFlags.NONE, null);
+            print('✓ Light mode detected - created light.mode file');
         } catch (error) {
-            print('Error handling light mode:', error.message);
+            print('Error creating light.mode file:', error.message);
+        }
+    }
+
+    _removeLightModeFile(lightModeFile) {
+        if (!lightModeFile.query_exists(null)) {
+            return;
+        }
+
+        try {
+            lightModeFile.delete(null);
+            print('✓ Dark mode detected - removed light.mode file');
+        } catch (error) {
+            print('Error removing light.mode file:', error.message);
         }
     }
 
     symlinkWallpapers(homeDir, temaThemeDir) {
+        const wallpapersDir = homeDir + '/Wallpapers';
+        const backgroundsDir = temaThemeDir + '/backgrounds';
+
+        const wallpapersFile = Gio.File.new_for_path(wallpapersDir);
+
+        if (!wallpapersFile.query_exists(null)) {
+            print('Warning:', wallpapersDir, 'directory not found');
+            return;
+        }
+
         try {
-            const wallpapersDir = homeDir + '/Wallpapers';
-            const backgroundsDir = temaThemeDir + '/backgrounds';
-
-            const wallpapersFile = Gio.File.new_for_path(wallpapersDir);
+            this._removeExistingBackgroundsDir(backgroundsDir);
             const backgroundsFile = Gio.File.new_for_path(backgroundsDir);
-
-            if (wallpapersFile.query_exists(null)) {
-                if (backgroundsFile.query_exists(null)) {
-                    if (backgroundsFile.query_file_type(Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null) === Gio.FileType.SYMBOLIC_LINK) {
-                        backgroundsFile.delete(null);
-                    } else {
-                        const deleteProcess = new Gio.Subprocess({
-                            argv: ['rm', '-rf', backgroundsDir],
-                            flags: Gio.SubprocessFlags.NONE
-                        });
-                        deleteProcess.init(null);
-                        deleteProcess.wait(null);
-                    }
-                }
-
-                backgroundsFile.make_symbolic_link(wallpapersDir, null);
-                print('✓ Symlinked', wallpapersDir, 'to', backgroundsDir);
-            } else {
-                print('Warning:', wallpapersDir, 'directory not found');
-            }
+            backgroundsFile.make_symbolic_link(wallpapersDir, null);
+            print('✓ Symlinked', wallpapersDir, 'to', backgroundsDir);
         } catch (error) {
             print('Error symlinking wallpapers:', error.message);
         }
     }
 
+    _removeExistingBackgroundsDir(backgroundsDir) {
+        const backgroundsFile = Gio.File.new_for_path(backgroundsDir);
+
+        if (!backgroundsFile.query_exists(null)) {
+            return;
+        }
+
+        const fileType = backgroundsFile.query_file_type(Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null);
+
+        if (fileType === Gio.FileType.SYMBOLIC_LINK) {
+            backgroundsFile.delete(null);
+            return;
+        }
+
+        const deleteProcess = new Gio.Subprocess({
+            argv: ['rm', '-rf', backgroundsDir],
+            flags: Gio.SubprocessFlags.NONE
+        });
+        deleteProcess.init(null);
+        deleteProcess.wait(null);
+    }
+
     setOmarchyBackground(colors, configBase) {
+        if (!colors.wallpaper) {
+            print('Warning: Could not determine current wallpaper from pywal');
+            return;
+        }
+
+        if (!this._validateWallpaperFile(colors.wallpaper)) {
+            return;
+        }
+
         try {
-            if (!colors.wallpaper) {
-                print('Warning: Could not determine current wallpaper from pywal');
-                return;
-            }
-
-            const wallpaperFile = Gio.File.new_for_path(colors.wallpaper);
-            if (!wallpaperFile.query_exists(null)) {
-                print('Warning: Wallpaper file does not exist:', colors.wallpaper);
-                return;
-            }
-
-            if (!this.isImageFile(colors.wallpaper)) {
-                print('Warning: File is not a recognized image format:', colors.wallpaper);
-                return;
-            }
-
             const backgroundLink = configBase + '/omarchy/current/background';
-            const backgroundFile = Gio.File.new_for_path(backgroundLink);
-
-            if (backgroundFile.query_exists(null)) {
-                backgroundFile.delete(null);
-            }
-
-            backgroundFile.make_symbolic_link(colors.wallpaper, null);
-            print('✓ Set background symlink:', colors.wallpaper);
-
+            this._createBackgroundSymlink(backgroundLink, colors.wallpaper);
             this.app.wallpaperManager.restartSwaybg(backgroundLink);
         } catch (error) {
             print('Error setting Omarchy background:', error.message);
         }
+    }
+
+    _validateWallpaperFile(wallpaperPath) {
+        const wallpaperFile = Gio.File.new_for_path(wallpaperPath);
+
+        if (!wallpaperFile.query_exists(null)) {
+            print('Warning: Wallpaper file does not exist:', wallpaperPath);
+            return false;
+        }
+
+        if (!this.isImageFile(wallpaperPath)) {
+            print('Warning: File is not a recognized image format:', wallpaperPath);
+            return false;
+        }
+
+        return true;
+    }
+
+    _createBackgroundSymlink(backgroundLink, wallpaperPath) {
+        const backgroundFile = Gio.File.new_for_path(backgroundLink);
+
+        if (backgroundFile.query_exists(null)) {
+            backgroundFile.delete(null);
+        }
+
+        backgroundFile.make_symbolic_link(wallpaperPath, null);
+        print('✓ Set background symlink:', wallpaperPath);
     }
 
     applyOmarchyTheme() {
@@ -315,104 +378,98 @@ var ThemeGenerator = class ThemeGenerator {
     }
 
     isImageFile(fileName) {
-        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff'];
         const lowerFileName = fileName.toLowerCase();
-        return imageExtensions.some(ext => lowerFileName.endsWith(ext));
+        return IMAGE_EXTENSIONS.some(ext => lowerFileName.endsWith(ext));
     }
 
     ejectTheme(imagePath, fileName, lightMode, outputPath) {
-        try {
-            print(`Ejecting theme to: ${outputPath}`);
+        print(`Ejecting theme to: ${outputPath}`);
 
-            // First, run wal to generate colors
-            const walPath = this.app.wallpaperManager.findWalExecutable();
-            if (!walPath) {
-                this.app.showError('Error: wal not found. Please install pywal.');
-                return;
-            }
-
-            const spinnerDialog = this.showEjectionSpinner();
-            this.runWalAndEject(walPath, imagePath, lightMode, outputPath, fileName, spinnerDialog);
-        } catch (error) {
-            this.app.showError(`Error ejecting theme: ${error.message}`);
+        const walPath = this.app.wallpaperManager.findWalExecutable();
+        if (!walPath) {
+            this.app.showError('Error: wal not found. Please install pywal.');
+            return;
         }
+
+        const spinnerDialog = this._showEjectionSpinner();
+        this._runWalAndEject(walPath, imagePath, lightMode, outputPath, spinnerDialog);
     }
 
-    runWalAndEject(walPath, imagePath, lightMode, outputPath, fileName, spinnerDialog) {
+    _runWalAndEject(walPath, imagePath, lightMode, outputPath, spinnerDialog) {
+        const walArgs = this._buildWalArgsForEjection(walPath, imagePath, lightMode);
+        const launcher = this._createWalLauncher();
+        const walProcess = launcher.spawnv(walArgs);
+
+        walProcess.communicate_utf8_async(null, null, (source, result) => {
+            this._handleEjectionWalResult(walProcess, result, outputPath, imagePath, spinnerDialog);
+        });
+    }
+
+    _buildWalArgsForEjection(walPath, imagePath, lightMode) {
+        const baseArgs = [walPath, '-n', '-i', imagePath];
+        if (lightMode) {
+            baseArgs.splice(2, 0, '-l');
+        }
+        return baseArgs;
+    }
+
+    _createWalLauncher() {
+        const launcher = new Gio.SubprocessLauncher({
+            flags: Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
+        });
+
+        launcher.setenv('HOME', GLib.get_home_dir(), true);
+
+        const currentPath = GLib.getenv('PATH') || '';
+        const localBin = GLib.get_home_dir() + '/.local/bin';
+        if (!currentPath.includes(localBin)) {
+            launcher.setenv('PATH', `${currentPath}:${localBin}`, true);
+        }
+
+        return launcher;
+    }
+
+    _handleEjectionWalResult(walProcess, result, outputPath, imagePath, spinnerDialog) {
         try {
-            const walArgs = lightMode ? [walPath, '-n', '-l', '-i', imagePath] : [walPath, '-n', '-i', imagePath];
+            const [, , walStderr] = walProcess.communicate_utf8_finish(result);
 
-            const launcher = new Gio.SubprocessLauncher({
-                flags: Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
-            });
-
-            launcher.setenv('HOME', GLib.get_home_dir(), true);
-            const currentPath = GLib.getenv('PATH') || '';
-            const localBin = GLib.get_home_dir() + '/.local/bin';
-            if (!currentPath.includes(localBin)) {
-                launcher.setenv('PATH', currentPath + ':' + localBin, true);
+            if (walProcess.get_successful()) {
+                this._processEjectedTheme(outputPath, imagePath, spinnerDialog);
+            } else {
+                spinnerDialog.destroy();
+                this.app.showError(`Error running wal: ${walStderr}`);
             }
-
-            const walProcess = launcher.spawnv(walArgs);
-
-            walProcess.communicate_utf8_async(null, null, (source, result) => {
-                try {
-                    const [, walStdout, walStderr] = walProcess.communicate_utf8_finish(result);
-
-                    if (walProcess.get_successful()) {
-                        const colors = this.readPywalColors();
-                        if (colors) {
-                            this.createEjectedTheme(outputPath, colors, imagePath, spinnerDialog);
-                        } else {
-                            spinnerDialog.destroy();
-                            this.app.showError('Error: Could not read pywal colors');
-                        }
-                    } else {
-                        spinnerDialog.destroy();
-                        this.app.showError(`Error running wal: ${walStderr}`);
-                    }
-                } catch (error) {
-                    spinnerDialog.destroy();
-                    this.app.showError(`Error: ${error.message}`);
-                }
-            });
         } catch (error) {
             spinnerDialog.destroy();
             this.app.showError(`Error: ${error.message}`);
         }
     }
 
-    createEjectedTheme(outputPath, colors, imagePath, spinnerDialog) {
+    _processEjectedTheme(outputPath, imagePath, spinnerDialog) {
+        const colors = this.readPywalColors();
+
+        if (!colors) {
+            spinnerDialog.destroy();
+            this.app.showError('Error: Could not read pywal colors');
+            return;
+        }
+
+        this._createEjectedTheme(outputPath, colors, imagePath, spinnerDialog);
+    }
+
+    _createEjectedTheme(outputPath, colors, imagePath, spinnerDialog) {
+        const templatesDir = this.findTemplatesDirectory();
+
+        if (!templatesDir) {
+            spinnerDialog.destroy();
+            this.app.showError('Templates directory not found!');
+            return;
+        }
+
         try {
-            // Create output directory
-            const outputDir = Gio.File.new_for_path(outputPath);
-            if (!outputDir.query_exists(null)) {
-                outputDir.make_directory_with_parents(null);
-            }
-
-            const templatesDir = this.findTemplatesDirectory();
-            if (!templatesDir) {
-                spinnerDialog.destroy();
-                this.app.showError('Templates directory not found!');
-                return;
-            }
-
-            // Process all templates to the output directory
-            this.processTemplates(templatesDir, outputPath, colors);
-            this.copyStaticFiles(templatesDir, outputPath);
-            this.handleLightMode(colors, outputPath);
-
-            // Create backgrounds directory and copy the wallpaper
-            const backgroundsDir = Gio.File.new_for_path(outputPath + '/backgrounds');
-
-            if (!backgroundsDir.query_exists(null)) {
-                backgroundsDir.make_directory(null);
-            }
-
-            const wallpaperFile = Gio.File.new_for_path(imagePath);
-            const wallpaperName = wallpaperFile.get_basename();
-            const destWallpaper = Gio.File.new_for_path(outputPath + '/backgrounds/' + wallpaperName);
-            wallpaperFile.copy(destWallpaper, Gio.FileCopyFlags.OVERWRITE, null, null);
+            this._createOutputDirectory(outputPath);
+            this._processAllTemplates(templatesDir, outputPath, colors);
+            this._copyWallpaperToOutput(imagePath, outputPath);
 
             spinnerDialog.destroy();
             this.app.showSuccess(`Theme ejected successfully to:\n${outputPath}`);
@@ -423,12 +480,27 @@ var ThemeGenerator = class ThemeGenerator {
         }
     }
 
-    getFileExtension(fileName) {
-        const lastDot = fileName.lastIndexOf('.');
-        return lastDot > 0 ? fileName.substring(lastDot) : '';
+    _createOutputDirectory(outputPath) {
+        const outputDir = Gio.File.new_for_path(outputPath);
+        if (!outputDir.query_exists(null)) {
+            outputDir.make_directory_with_parents(null);
+        }
     }
 
-    showEjectionSpinner() {
+    _copyWallpaperToOutput(imagePath, outputPath) {
+        const backgroundsDir = Gio.File.new_for_path(outputPath + '/backgrounds');
+
+        if (!backgroundsDir.query_exists(null)) {
+            backgroundsDir.make_directory(null);
+        }
+
+        const wallpaperFile = Gio.File.new_for_path(imagePath);
+        const wallpaperName = wallpaperFile.get_basename();
+        const destWallpaper = Gio.File.new_for_path(outputPath + '/backgrounds/' + wallpaperName);
+        wallpaperFile.copy(destWallpaper, Gio.FileCopyFlags.OVERWRITE, null, null);
+    }
+
+    _showEjectionSpinner() {
         const { Adw, Gtk } = imports.gi;
         const dialog = new Adw.MessageDialog({
             transient_for: this.app.get_active_window(),

@@ -62,29 +62,24 @@ class TemaApp extends Adw.Application {
         const homeDir = GLib.get_home_dir();
         const wallpapersDir = Gio.File.new_for_path(homeDir + '/Wallpapers');
 
-        if (!this.createWallpapersDirectory(wallpapersDir)) {
-            return;
-        }
-
-        this.copyOmarchyBackgrounds(homeDir, wallpapersDir);
+        this._ensureWallpapersDirectoryExists(wallpapersDir);
+        this._copyOmarchyBackgrounds(homeDir, wallpapersDir);
     }
 
-    createWallpapersDirectory(wallpapersDir) {
+    _ensureWallpapersDirectoryExists(wallpapersDir) {
         if (wallpapersDir.query_exists(null)) {
-            return true;
+            return;
         }
 
         try {
             wallpapersDir.make_directory_with_parents(null);
             print('✓ Created Wallpapers directory');
-            return true;
         } catch (error) {
             print('Error creating Wallpapers directory:', error.message);
-            return false;
         }
     }
 
-    copyOmarchyBackgrounds(homeDir, wallpapersDir) {
+    _copyOmarchyBackgrounds(homeDir, wallpapersDir) {
         const themesPath = homeDir + '/.config/omarchy/themes';
         const themesDir = Gio.File.new_for_path(themesPath);
 
@@ -101,7 +96,7 @@ class TemaApp extends Adw.Application {
 
             let fileInfo;
             while ((fileInfo = enumerator.next_file(null)) !== null) {
-                this.processThemeDirectory(fileInfo, themesPath, wallpapersDir);
+                this._processThemeDirectory(fileInfo, themesPath, wallpapersDir);
             }
 
             enumerator.close(null);
@@ -110,7 +105,7 @@ class TemaApp extends Adw.Application {
         }
     }
 
-    processThemeDirectory(fileInfo, themesPath, wallpapersDir) {
+    _processThemeDirectory(fileInfo, themesPath, wallpapersDir) {
         if (fileInfo.get_file_type() !== Gio.FileType.DIRECTORY) {
             return;
         }
@@ -123,10 +118,10 @@ class TemaApp extends Adw.Application {
             return;
         }
 
-        this.copyBackgroundFiles(backgroundsDir, wallpapersDir);
+        this._copyBackgroundFiles(backgroundsDir, wallpapersDir);
     }
 
-    copyBackgroundFiles(backgroundsDir, wallpapersDir) {
+    _copyBackgroundFiles(backgroundsDir, wallpapersDir) {
         try {
             const enumerator = backgroundsDir.enumerate_children(
                 'standard::name,standard::type',
@@ -136,7 +131,7 @@ class TemaApp extends Adw.Application {
 
             let fileInfo;
             while ((fileInfo = enumerator.next_file(null)) !== null) {
-                this.copyBackgroundFile(fileInfo, backgroundsDir, wallpapersDir);
+                this._copyBackgroundFile(fileInfo, backgroundsDir, wallpapersDir);
             }
 
             enumerator.close(null);
@@ -145,7 +140,7 @@ class TemaApp extends Adw.Application {
         }
     }
 
-    copyBackgroundFile(fileInfo, backgroundsDir, wallpapersDir) {
+    _copyBackgroundFile(fileInfo, backgroundsDir, wallpapersDir) {
         if (fileInfo.get_file_type() !== Gio.FileType.REGULAR) {
             return;
         }
@@ -168,41 +163,49 @@ class TemaApp extends Adw.Application {
 
     loadCustomCSS() {
         const cssProvider = new Gtk.CssProvider();
-        try {
-            // Try loading from file first for development mode
-            let cssPath = GLib.get_current_dir() + '/src/style.css';
-            let cssFile = Gio.File.new_for_path(cssPath);
 
-            if (cssFile.query_exists(null)) {
-                try {
-                    cssProvider.load_from_file(cssFile);
-                    Gtk.StyleContext.add_provider_for_display(
-                        Gdk.Display.get_default(),
-                        cssProvider,
-                        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-                    );
-                    print('✓ Custom CSS loaded from file:', cssPath);
-                    return;
-                } catch (e) {
-                    print('Error loading CSS from file:', e.message);
-                }
-            }
-
-            // Fall back to gresource (packaged mode)
-            try {
-                cssProvider.load_from_resource('/com/bjarneo/Tema/js/style.css');
-                Gtk.StyleContext.add_provider_for_display(
-                    Gdk.Display.get_default(),
-                    cssProvider,
-                    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-                );
-                print('✓ Custom CSS loaded from gresource');
-            } catch (e) {
-                print('Note: Custom CSS not loaded from gresource');
-            }
-        } catch (error) {
-            print('Note: Custom CSS not loaded:', error.message);
+        if (this._tryLoadCSSFromFile(cssProvider)) {
+            return;
         }
+
+        this._tryLoadCSSFromResource(cssProvider);
+    }
+
+    _tryLoadCSSFromFile(cssProvider) {
+        const cssPath = GLib.get_current_dir() + '/src/style.css';
+        const cssFile = Gio.File.new_for_path(cssPath);
+
+        if (!cssFile.query_exists(null)) {
+            return false;
+        }
+
+        try {
+            cssProvider.load_from_file(cssFile);
+            this._applyStyleProvider(cssProvider);
+            print('✓ Custom CSS loaded from file:', cssPath);
+            return true;
+        } catch (error) {
+            print('Error loading CSS from file:', error.message);
+            return false;
+        }
+    }
+
+    _tryLoadCSSFromResource(cssProvider) {
+        try {
+            cssProvider.load_from_resource('/com/bjarneo/Tema/js/style.css');
+            this._applyStyleProvider(cssProvider);
+            print('✓ Custom CSS loaded from gresource');
+        } catch (error) {
+            print('Note: Custom CSS not loaded from gresource');
+        }
+    }
+
+    _applyStyleProvider(cssProvider) {
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(),
+            cssProvider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        );
     }
 
     createMainWindow() {
@@ -324,29 +327,47 @@ class TemaApp extends Adw.Application {
     }
 
     handleKeyPress(keyval, window, grid) {
-        // Vim bindings - convert hjkl to arrow keys
-        const vimKeyMap = {
+        if (this._handleVimNavigation(keyval, grid)) {
+            return true;
+        }
+
+        return this._handleActionKey(keyval, window, grid);
+    }
+
+    _handleVimNavigation(keyval, grid) {
+        const VIM_KEY_MAP = {
             104: Gtk.DirectionType.LEFT,  // h
             106: Gtk.DirectionType.DOWN,  // j
             107: Gtk.DirectionType.UP,    // k
             108: Gtk.DirectionType.RIGHT  // l
         };
 
-        if (vimKeyMap[keyval] !== undefined) {
-            grid.child_focus(vimKeyMap[keyval]);
-            return true;
+        const direction = VIM_KEY_MAP[keyval];
+        if (direction === undefined) {
+            return false;
         }
 
+        grid.child_focus(direction);
+        return true;
+    }
+
+    _handleActionKey(keyval, window, grid) {
+        const KEY_ENTER = 65293;
+        const KEY_E = 101;
+        const KEY_QUESTION = 63;
+        const KEY_Q = 113;
+        const KEY_ESCAPE = 65307;
+
         switch (keyval) {
-            case 65293: // Enter key
-                return this.handleEnterKey(grid, window);
-            case 101: // 'e' key
-                return this.handleEjectKey(grid, window);
-            case 63: // '?' key
+            case KEY_ENTER:
+                return this._handleEnterKey(grid);
+            case KEY_E:
+                return this._handleEjectKey(grid);
+            case KEY_QUESTION:
                 this.dialogManager.showHelpModal(window);
                 return true;
-            case 113: // 'q' key
-            case 65307: // Escape key
+            case KEY_Q:
+            case KEY_ESCAPE:
                 window.close();
                 return true;
             default:
@@ -354,26 +375,38 @@ class TemaApp extends Adw.Application {
         }
     }
 
-    handleEnterKey(grid, window) {
-        const selected = grid.get_selected_children();
-        if (selected.length > 0) {
-            const selectedBox = selected[0].get_child();
-            if (selectedBox && selectedBox._filePath) {
-                this.handleWallpaperSelection(selectedBox._filePath, selectedBox._fileName);
-            }
+    _handleEnterKey(grid) {
+        const selectedBox = this._getSelectedBox(grid);
+        if (!selectedBox) {
+            return true;
         }
+
+        this.handleWallpaperSelection(selectedBox._filePath, selectedBox._fileName);
         return true;
     }
 
-    handleEjectKey(grid, window) {
-        const selected = grid.get_selected_children();
-        if (selected.length > 0) {
-            const selectedBox = selected[0].get_child();
-            if (selectedBox && selectedBox._filePath) {
-                this.handleThemeEjection(selectedBox._filePath, selectedBox._fileName);
-            }
+    _handleEjectKey(grid) {
+        const selectedBox = this._getSelectedBox(grid);
+        if (!selectedBox) {
+            return true;
         }
+
+        this.handleThemeEjection(selectedBox._filePath, selectedBox._fileName);
         return true;
+    }
+
+    _getSelectedBox(grid) {
+        const selected = grid.get_selected_children();
+        if (selected.length === 0) {
+            return null;
+        }
+
+        const selectedBox = selected[0].get_child();
+        if (!selectedBox || !selectedBox._filePath) {
+            return null;
+        }
+
+        return selectedBox;
     }
 
     handleWallpaperSelection(filePath, fileName) {
