@@ -9,7 +9,6 @@ flowboxchild:selected {
 
 flowboxchild:hover {
     border-radius: 0;
-    cursor: pointer;
 }
 
 flowboxchild:selected > box {
@@ -39,7 +38,6 @@ window.messagedialog {
 /* Remove border radius for buttons */
 button {
     border-radius: 0;
-    cursor: pointer;
 }
 
 button:focus {
