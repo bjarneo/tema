@@ -406,9 +406,9 @@ var ThemeGenerator = class ThemeGenerator {
     }
 
     _buildWalArgsForEjection(walPath, imagePath, lightMode) {
-        const baseArgs = [walPath, '-n', '-i', imagePath];
+        const baseArgs = [walPath, '-n', '-s', '-t', '-e', '-i', imagePath];
         if (lightMode) {
-            baseArgs.splice(2, 0, '-l');
+            baseArgs.splice(5, 0, '-l');
         }
         return baseArgs;
     }
