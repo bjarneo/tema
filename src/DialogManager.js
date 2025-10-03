@@ -36,26 +36,28 @@ var DialogManager = class DialogManager {
         const dialog = new Adw.MessageDialog({
             transient_for: parent,
             modal: true,
-            heading: 'Keyboard Shortcuts',
-            body: `Navigation:
-Arrow keys - Navigate through wallpapers
-h, j, k, l - Vim-style navigation (left, down, up, right)
-Enter - Set selected wallpaper
-Tab - Move focus between UI elements
-
-Help:
-? - Show this help dialog
-
-Application:
-q, Esc - Quit application
-
-Setting Wallpapers:
-Enter/Double-click - Choose dark/light mode for selected wallpaper
-
-Theme Ejection:
-e - Eject selected wallpaper as a standalone theme`
+            heading: 'Keyboard Shortcuts'
         });
 
+        const label = new Gtk.Label({
+            label: `Navigation
+Arrow Keys - Navigate through wallpapers
+h j k l - Vim-style navigation
+Tab - Move focus between elements
+Enter - Set selected wallpaper
+
+Actions
+e - Eject theme from wallpaper
+? - Show this help dialog
+q / Esc - Quit application`,
+            xalign: 0,
+            margin_start: 12,
+            margin_end: 12,
+            margin_top: 12,
+            margin_bottom: 12
+        });
+
+        dialog.set_extra_child(label);
         dialog.add_response('ok', 'Got it!');
         dialog.set_default_response('ok');
         dialog.set_close_response('ok');
