@@ -70,3 +70,14 @@ button:focus {
 .message-dialog button {
     border-radius: 0;
 }
+
+/* Small header buttons */
+.small-button {
+    font-size: 11px;
+    padding: 2px 6px;
+    min-height: 20px;
+}
+
+.small-button image {
+    -gtk-icon-size: 14px;
+}

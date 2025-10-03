@@ -281,17 +281,17 @@ class TemaApp extends Adw.Application {
         const headerBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 0,
-            margin_top: 8,
-            margin_bottom: 8,
-            margin_start: 12,
-            margin_end: 12,
+            margin_top: 4,
+            margin_bottom: 4,
+            margin_start: 8,
+            margin_end: 8,
             can_focus: false
         });
 
         const titleButton = new Gtk.Button({
             label: 'Tēma',
             has_frame: false,
-            css_classes: ['flat'],
+            css_classes: ['flat', 'small-button'],
             focus_on_click: false
         });
 
@@ -302,7 +302,7 @@ class TemaApp extends Adw.Application {
         const settingsButton = new Gtk.Button({
             icon_name: 'emblem-system-symbolic',
             has_frame: false,
-            css_classes: ['flat'],
+            css_classes: ['flat', 'small-button'],
             focus_on_click: false
         });
 
