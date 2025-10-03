@@ -1,5 +1,15 @@
 const { GLib, Gio } = imports.gi;
 
+let SubprocessUtils, ColorUtils;
+
+try {
+    ({ SubprocessUtils } = imports.src.SubprocessUtils);
+    ({ ColorUtils } = imports.src.ColorUtils);
+} catch (e) {
+    ({ SubprocessUtils } = imports.SubprocessUtils);
+    ({ ColorUtils } = imports.ColorUtils);
+}
+
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff'];
 const LUMINANCE_LIGHT_THRESHOLD = 0.5;
 
@@ -139,10 +149,7 @@ var ThemeGenerator = class ThemeGenerator {
     }
 
     hexToRgb(hex) {
-        const r = parseInt(hex.substring(1, 3), 16);
-        const g = parseInt(hex.substring(3, 5), 16);
-        const b = parseInt(hex.substring(5, 7), 16);
-        return `${r} ${g} ${b}`;
+        return ColorUtils.hexToRgb(hex);
     }
 
     processTemplate(templatePath, outputPath, colors) {
@@ -171,7 +178,7 @@ var ThemeGenerator = class ThemeGenerator {
         for (const [key, value] of Object.entries(colors)) {
             content = content.replace(
                 new RegExp(`\\{${key}\\.strip\\}`, 'g'),
-                value.replace('#', '')
+                ColorUtils.stripHash(value)
             );
             content = content.replace(
                 new RegExp(`\\{${key}\\.rgb\\}`, 'g'),
@@ -228,11 +235,7 @@ var ThemeGenerator = class ThemeGenerator {
     }
 
     _isLightMode(backgroundColor) {
-        const r = parseInt(backgroundColor.substring(1, 3), 16);
-        const g = parseInt(backgroundColor.substring(3, 5), 16);
-        const b = parseInt(backgroundColor.substring(5, 7), 16);
-        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
+        const luminance = ColorUtils.calculateLuminance(backgroundColor);
         return luminance > LUMINANCE_LIGHT_THRESHOLD;
     }
 
@@ -349,28 +352,22 @@ var ThemeGenerator = class ThemeGenerator {
 
     applyOmarchyTheme() {
         try {
-            const checkProcess = new Gio.Subprocess({
-                argv: ['which', 'omarchy-theme-set'],
-                flags: Gio.SubprocessFlags.STDOUT_PIPE
-            });
-            checkProcess.init(null);
-            checkProcess.wait(null);
-
-            if (checkProcess.get_successful()) {
-                const applyProcess = new Gio.Subprocess({
-                    argv: ['omarchy-theme-set', 'tema'],
-                    flags: Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
-                });
-                applyProcess.init(null);
-                const [, stdout, stderr] = applyProcess.communicate_utf8(null, null);
-
-                if (applyProcess.get_successful()) {
-                    print('✓ Omarchy tema theme applied!');
-                } else {
-                    print('Error applying Omarchy theme:', stderr);
-                }
-            } else {
+            if (!SubprocessUtils.checkCommandExists('omarchy-theme-set')) {
                 print('Warning: omarchy-theme-set command not found');
+                return;
+            }
+
+            const applyProcess = new Gio.Subprocess({
+                argv: ['omarchy-theme-set', 'tema'],
+                flags: Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
+            });
+            applyProcess.init(null);
+            const [, stdout, stderr] = applyProcess.communicate_utf8(null, null);
+
+            if (applyProcess.get_successful()) {
+                print('✓ Omarchy tema theme applied!');
+            } else {
+                print('Error applying Omarchy theme:', stderr);
             }
         } catch (error) {
             print('Error applying Omarchy theme:', error.message);
@@ -414,19 +411,7 @@ var ThemeGenerator = class ThemeGenerator {
     }
 
     _createWalLauncher() {
-        const launcher = new Gio.SubprocessLauncher({
-            flags: Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
-        });
-
-        launcher.setenv('HOME', GLib.get_home_dir(), true);
-
-        const currentPath = GLib.getenv('PATH') || '';
-        const localBin = GLib.get_home_dir() + '/.local/bin';
-        if (!currentPath.includes(localBin)) {
-            launcher.setenv('PATH', `${currentPath}:${localBin}`, true);
-        }
-
-        return launcher;
+        return SubprocessUtils.createSubprocessLauncher();
     }
 
     _handleEjectionWalResult(walProcess, result, outputPath, imagePath, spinnerDialog) {

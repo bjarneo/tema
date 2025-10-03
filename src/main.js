@@ -25,6 +25,13 @@ try {
 const APP_ID = 'li.oever.tema';
 const SETTINGS_SCHEMA = 'li.oever.tema';
 
+// Keyboard key codes
+const KEY_ENTER = 65293;
+const KEY_ESCAPE = 65307;
+const KEY_Q = 113;
+const KEY_E = 101;
+const KEY_QUESTION = 63;
+
 const TemaApp = GObject.registerClass(
 class TemaApp extends Adw.Application {
     constructor() {
@@ -339,13 +346,14 @@ class TemaApp extends Adw.Application {
         dialog.add_controller(keyController);
 
         keyController.connect('key-pressed', (controller, keyval) => {
-            const KEY_ESCAPE = 65307;
             if (keyval === KEY_ESCAPE) {
                 dialog.close();
                 return true;
             }
             return false;
         });
+
+        this.dialogManager.addVimKeybindings(dialog);
 
         const headerBar = new Adw.HeaderBar();
         const toolbarView = new Adw.ToolbarView();
@@ -536,12 +544,6 @@ class TemaApp extends Adw.Application {
     }
 
     _handleActionKey(keyval, window, grid) {
-        const KEY_ENTER = 65293;
-        const KEY_E = 101;
-        const KEY_QUESTION = 63;
-        const KEY_Q = 113;
-        const KEY_ESCAPE = 65307;
-
         switch (keyval) {
             case KEY_ENTER:
                 return this._handleEnterKey(grid);

@@ -1,5 +1,13 @@
 const { GLib, Gio, Adw, Gtk } = imports.gi;
 
+let SubprocessUtils;
+
+try {
+    ({ SubprocessUtils } = imports.src.SubprocessUtils);
+} catch (e) {
+    ({ SubprocessUtils } = imports.SubprocessUtils);
+}
+
 const WAL_PATHS = [
     'wal',
     '/usr/bin/wal',
@@ -25,26 +33,7 @@ var WallpaperManager = class WallpaperManager {
     }
 
     findWalExecutable() {
-        for (const path of WAL_PATHS) {
-            if (this._isExecutable(path)) {
-                return path;
-            }
-        }
-        return null;
-    }
-
-    _isExecutable(path) {
-        try {
-            const subprocess = new Gio.Subprocess({
-                argv: ['test', '-x', path],
-                flags: Gio.SubprocessFlags.NONE
-            });
-            subprocess.init(null);
-            subprocess.wait(null);
-            return subprocess.get_successful();
-        } catch (error) {
-            return false;
-        }
+        return SubprocessUtils.findExecutable('wal', WAL_PATHS);
     }
 
     _showWalNotFoundError() {
@@ -71,22 +60,7 @@ var WallpaperManager = class WallpaperManager {
     }
 
     _createSubprocessLauncher() {
-        const launcher = new Gio.SubprocessLauncher({
-            flags: Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
-        });
-
-        this._setupLauncherEnvironment(launcher);
-        return launcher;
-    }
-
-    _setupLauncherEnvironment(launcher) {
-        launcher.setenv('HOME', GLib.get_home_dir(), true);
-
-        const currentPath = GLib.getenv('PATH') || '';
-        const localBin = GLib.get_home_dir() + '/.local/bin';
-        if (!currentPath.includes(localBin)) {
-            launcher.setenv('PATH', `${currentPath}:${localBin}`, true);
-        }
+        return SubprocessUtils.createSubprocessLauncher();
     }
 
     _handleWalCompletion(walProcess, result, spinnerDialog, fileName, lightMode) {
@@ -201,16 +175,6 @@ var WallpaperManager = class WallpaperManager {
     }
 
     _isUwsmAvailable() {
-        try {
-            const uwsmCheck = new Gio.Subprocess({
-                argv: ['which', 'uwsm'],
-                flags: Gio.SubprocessFlags.STDOUT_PIPE
-            });
-            uwsmCheck.init(null);
-            uwsmCheck.wait(null);
-            return uwsmCheck.get_successful();
-        } catch (error) {
-            return false;
-        }
+        return SubprocessUtils.checkCommandExists('uwsm');
     }
 };

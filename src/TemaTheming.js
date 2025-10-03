@@ -1,5 +1,13 @@
 const { Gtk, Gdk, GLib, Gio } = imports.gi;
 
+let ColorUtils;
+
+try {
+    ({ ColorUtils } = imports.src.ColorUtils);
+} catch (e) {
+    ({ ColorUtils } = imports.ColorUtils);
+}
+
 const PYWAL_COLORS_PATH = GLib.get_home_dir() + '/.cache/wal/colors';
 const PYWAL_ACCENT_COLOR_INDEX = 2;
 const DEFAULT_DARK_BACKGROUND = 'rgba(10, 10, 20, 0.95)';
@@ -72,11 +80,7 @@ var TemaTheming = class TemaTheming {
     }
 
     hexToRgba(hex, alpha = 0.95) {
-        const cleanHex = hex.replace('#', '');
-        const r = parseInt(cleanHex.substring(0, 2), 16);
-        const g = parseInt(cleanHex.substring(2, 4), 16);
-        const b = parseInt(cleanHex.substring(4, 6), 16);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        return ColorUtils.hexToRgba(hex, alpha);
     }
 
     generateDynamicCSS(isDark) {

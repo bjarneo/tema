@@ -1,5 +1,13 @@
 const { Gtk, GLib, Gio, GdkPixbuf } = imports.gi;
 
+let SubprocessUtils;
+
+try {
+    ({ SubprocessUtils } = imports.src.SubprocessUtils);
+} catch (e) {
+    ({ SubprocessUtils } = imports.SubprocessUtils);
+}
+
 const THUMBNAIL_SIZE = 92;
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff'];
 
@@ -127,27 +135,10 @@ var ThumbnailManager = class ThumbnailManager {
             return;
         }
 
-        try {
-            const subprocess = new Gio.Subprocess({
-                argv: ['which', 'magick'],
-                flags: Gio.SubprocessFlags.STDOUT_PIPE
-            });
-            subprocess.init(null);
-
-            subprocess.communicate_utf8_async(null, null, (source, result) => {
-                try {
-                    subprocess.communicate_utf8_finish(result);
-                    this.isImageMagickAvailable = subprocess.get_successful();
-                    callback(this.isImageMagickAvailable);
-                } catch (error) {
-                    this.isImageMagickAvailable = false;
-                    callback(false);
-                }
-            });
-        } catch (error) {
-            this.isImageMagickAvailable = false;
-            callback(false);
-        }
+        SubprocessUtils.checkCommandExists('magick', (available) => {
+            this.isImageMagickAvailable = available;
+            callback(available);
+        });
     }
 
     _generateThumbnail(placeholder, filePath, thumbnailPath, fileName) {
