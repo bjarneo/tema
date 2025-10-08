@@ -137,7 +137,8 @@ var ThemeGenerator = class ThemeGenerator {
             ['swayosd.css', temaThemeDir + '/swayosd.css'],
             ['walker.css', temaThemeDir + '/walker.css'],
             ['hyprlock.conf', temaThemeDir + '/hyprlock.conf'],
-            ['chromium.theme', temaThemeDir + '/chromium.theme']
+            ['chromium.theme', temaThemeDir + '/chromium.theme'],
+            ['vencord.theme.css', temaThemeDir + '/vencord.theme.css']
         ];
 
         for (const [templateName, temaOutput] of templateMappings) {
