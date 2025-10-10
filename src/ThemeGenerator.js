@@ -55,6 +55,7 @@ var ThemeGenerator = class ThemeGenerator {
     _processAllTemplates(templatesDir, temaThemeDir, colors) {
         this.processTemplates(templatesDir, temaThemeDir, colors);
         this.copyStaticFiles(templatesDir, temaThemeDir);
+        this.generateIconsTheme(temaThemeDir, colors);
         this.handleLightMode(colors, temaThemeDir);
     }
 
@@ -206,7 +207,7 @@ var ThemeGenerator = class ThemeGenerator {
     }
 
     copyStaticFiles(templatesDir, temaThemeDir) {
-        const staticFiles = ['neovim.lua', 'icons.theme'];
+        const staticFiles = ['neovim.lua'];
 
         for (const staticFile of staticFiles) {
             const sourceFile = Gio.File.new_for_path(templatesDir + '/' + staticFile);
@@ -220,6 +221,21 @@ var ThemeGenerator = class ThemeGenerator {
                     print('Warning: Could not copy', staticFile, ':', error.message);
                 }
             }
+        }
+    }
+
+    generateIconsTheme(temaThemeDir, colors) {
+        // Use color1 (the primary accent color) to determine the Yaru theme
+        const accentColor = colors.color1 || colors.color4;
+        const yaruTheme = ColorUtils.hexToYaruTheme(accentColor);
+
+        const iconsThemePath = temaThemeDir + '/icons.theme';
+
+        try {
+            this._writeOutputFile(iconsThemePath, yaruTheme + '\n');
+            print('✓ Generated icons.theme with', yaruTheme);
+        } catch (error) {
+            print('Error generating icons.theme:', error.message);
         }
     }
 
