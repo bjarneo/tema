@@ -85,34 +85,7 @@ makepkg -si
 
 This provides the cleanest installation with proper package management.
 
-### Option 2: Proper Installation with Meson (GJS Packaging Standard)
-
-For a complete native app installation following GTK/GJS standards:
-
-```bash
-# Install build dependencies
-sudo pacman -S meson ninja gjs gtk4 libadwaita
-
-# Build and install
-meson setup builddir
-meson compile -C builddir
-sudo meson install -C builddir
-```
-
-This installs:
-- Main application bundle (GResource) to `/usr/share/tema/`
-- All JavaScript modules bundled in the GResource
-- Command line symlink at `/usr/bin/tema`
-- Desktop file for application launcher
-- Template files to `/usr/share/tema/templates/`
-
-The build process:
-1. Compiles all JavaScript modules into a GResource bundle
-2. Configures the entry point script with proper paths
-3. Creates symlinks for command-line access
-4. Installs templates and desktop integration files
-
-### Option 3: Development Setup
+### Option 2: Development Setup
 
 For development or quick testing:
 
@@ -122,7 +95,7 @@ chmod +x init.js
 ./init.js
 ```
 
-### Option 4: Manual Desktop Integration
+### Option 3: Manual Desktop Integration
 
 To make Tēma appear in your application menu without full installation:
 
