@@ -1,12 +1,9 @@
-const { Gtk, Gdk, GLib, Gio } = imports.gi;
+import Gtk from 'gi://Gtk';
+import Gdk from 'gi://Gdk';
+import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
 
-let ColorUtils;
-
-try {
-    ({ ColorUtils } = imports.src.ColorUtils);
-} catch (e) {
-    ({ ColorUtils } = imports.ColorUtils);
-}
+import {ColorUtils} from '../utils/ColorUtils.js';
 
 const PYWAL_COLORS_PATH = GLib.get_home_dir() + '/.cache/wal/colors';
 const PYWAL_ACCENT_COLOR_INDEX = 2;
@@ -14,7 +11,7 @@ const DEFAULT_DARK_BACKGROUND = 'rgba(10, 10, 20, 0.95)';
 const DEFAULT_LIGHT_BACKGROUND = 'rgba(245, 245, 250, 0.95)';
 const DEFAULT_ACCENT_COLOR = '#7aa2f7';
 
-var TemaTheming = class TemaTheming {
+export class TemaTheming {
     constructor() {
         this.dynamicCssProvider = new Gtk.CssProvider();
         this._setupColorSchemeMonitor();
@@ -22,7 +19,9 @@ var TemaTheming = class TemaTheming {
 
     _setupColorSchemeMonitor() {
         try {
-            const settings = new Gio.Settings({ schema: 'org.gnome.desktop.interface' });
+            const settings = new Gio.Settings({
+                schema: 'org.gnome.desktop.interface',
+            });
             settings.connect('changed::color-scheme', () => {
                 print('Color scheme changed, reapplying theming...');
                 this.applyDynamicTheming();
@@ -34,12 +33,17 @@ var TemaTheming = class TemaTheming {
 
     getSystemColorScheme() {
         try {
-            const [success, stdout] = GLib.spawn_command_line_sync('gsettings get org.gnome.desktop.interface color-scheme');
+            const [success, stdout] = GLib.spawn_command_line_sync(
+                'gsettings get org.gnome.desktop.interface color-scheme'
+            );
             if (!success) {
                 return true;
             }
 
-            const output = new TextDecoder().decode(stdout).trim().replace(/'/g, '');
+            const output = new TextDecoder()
+                .decode(stdout)
+                .trim()
+                .replace(/'/g, '');
             return output === 'prefer-dark';
         } catch (error) {
             print('Could not detect color scheme:', error.message);
@@ -54,7 +58,9 @@ var TemaTheming = class TemaTheming {
 
     getPywalAccentColor() {
         const colors = this._readPywalColors();
-        return colors.length > PYWAL_ACCENT_COLOR_INDEX ? colors[PYWAL_ACCENT_COLOR_INDEX] : null;
+        return colors.length > PYWAL_ACCENT_COLOR_INDEX
+            ? colors[PYWAL_ACCENT_COLOR_INDEX]
+            : null;
     }
 
     _readPywalColors() {
@@ -70,7 +76,8 @@ var TemaTheming = class TemaTheming {
             }
 
             const text = new TextDecoder().decode(contents);
-            return text.split('\n')
+            return text
+                .split('\n')
                 .map(line => line.trim())
                 .filter(line => line && line.startsWith('#'));
         } catch (error) {
@@ -104,11 +111,18 @@ window {
 
         if (pywalBg) {
             const backgroundColor = this.hexToRgba(pywalBg, 0.95);
-            print('Using pywal background color:', pywalBg, '->', backgroundColor);
+            print(
+                'Using pywal background color:',
+                pywalBg,
+                '->',
+                backgroundColor
+            );
             return backgroundColor;
         }
 
-        const fallbackColor = isDark ? DEFAULT_DARK_BACKGROUND : DEFAULT_LIGHT_BACKGROUND;
+        const fallbackColor = isDark
+            ? DEFAULT_DARK_BACKGROUND
+            : DEFAULT_LIGHT_BACKGROUND;
         print('Pywal color not found, using fallback:', fallbackColor);
         return fallbackColor;
     }
@@ -121,12 +135,16 @@ window {
             return pywalAccent;
         }
 
-        print('Pywal accent color not found, using fallback:', DEFAULT_ACCENT_COLOR);
+        print(
+            'Pywal accent color not found, using fallback:',
+            DEFAULT_ACCENT_COLOR
+        );
         return DEFAULT_ACCENT_COLOR;
     }
 
     applyDynamicTheming(forceDark = null) {
-        const isDark = forceDark !== null ? forceDark : this.getSystemColorScheme();
+        const isDark =
+            forceDark !== null ? forceDark : this.getSystemColorScheme();
 
         try {
             const css = this.generateDynamicCSS(isDark);
@@ -142,4 +160,4 @@ window {
             print('Error applying dynamic theming:', error.message);
         }
     }
-};
+}

@@ -1,17 +1,22 @@
-const { Gtk, GLib, Gio, GdkPixbuf } = imports.gi;
+import Gtk from 'gi://Gtk?version=4.0';
+import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
+import GdkPixbuf from 'gi://GdkPixbuf';
 
-let SubprocessUtils;
-
-try {
-    ({ SubprocessUtils } = imports.src.SubprocessUtils);
-} catch (e) {
-    ({ SubprocessUtils } = imports.SubprocessUtils);
-}
+import {SubprocessUtils} from '../utils/SubprocessUtils.js';
 
 const THUMBNAIL_SIZE = 92;
-const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff'];
+const IMAGE_EXTENSIONS = [
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.gif',
+    '.bmp',
+    '.webp',
+    '.tiff',
+];
 
-var ThumbnailManager = class ThumbnailManager {
+export class ThumbnailManager {
     constructor() {
         this.cacheDir = null;
         this.isImageMagickAvailable = null;
@@ -54,7 +59,7 @@ var ThumbnailManager = class ThumbnailManager {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
             const char = str.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
+            hash = (hash << 5) - hash + char;
             hash = hash & hash;
         }
         return Math.abs(hash).toString(16);
@@ -62,7 +67,11 @@ var ThumbnailManager = class ThumbnailManager {
 
     createPlaceholder(grid, filePath, fileName) {
         const placeholderWidget = this._createPlaceholderWidget();
-        const box = this._createThumbnailBox(placeholderWidget, filePath, fileName);
+        const box = this._createThumbnailBox(
+            placeholderWidget,
+            filePath,
+            fileName
+        );
         grid.append(box);
         return box;
     }
@@ -95,7 +104,7 @@ var ThumbnailManager = class ThumbnailManager {
         return new Gtk.Spinner({
             spinning: true,
             width_request: THUMBNAIL_SIZE,
-            height_request: THUMBNAIL_SIZE
+            height_request: THUMBNAIL_SIZE,
         });
     }
 
@@ -106,7 +115,7 @@ var ThumbnailManager = class ThumbnailManager {
             margin_top: 2,
             margin_bottom: 2,
             margin_start: 2,
-            margin_end: 2
+            margin_end: 2,
         });
 
         box.append(placeholderWidget);
@@ -135,7 +144,7 @@ var ThumbnailManager = class ThumbnailManager {
             return;
         }
 
-        SubprocessUtils.checkCommandExists('magick', (available) => {
+        SubprocessUtils.checkCommandExists('magick', available => {
             this.isImageMagickAvailable = available;
             callback(available);
         });
@@ -144,11 +153,19 @@ var ThumbnailManager = class ThumbnailManager {
     _generateThumbnail(placeholder, filePath, thumbnailPath, fileName) {
         this.ensureCacheDirectory();
 
-        this.checkImageMagick((available) => {
+        this.checkImageMagick(available => {
             if (available) {
-                this._generateThumbnailWithImageMagick(placeholder, filePath, thumbnailPath);
+                this._generateThumbnailWithImageMagick(
+                    placeholder,
+                    filePath,
+                    thumbnailPath
+                );
             } else {
-                this._generateThumbnailFallback(placeholder, filePath, fileName);
+                this._generateThumbnailFallback(
+                    placeholder,
+                    filePath,
+                    fileName
+                );
             }
         });
     }
@@ -157,18 +174,28 @@ var ThumbnailManager = class ThumbnailManager {
         try {
             const subprocess = new Gio.Subprocess({
                 argv: [
-                    'magick', filePath,
-                    '-resize', `${THUMBNAIL_SIZE}x${THUMBNAIL_SIZE}^`,
-                    '-gravity', 'center',
-                    '-extent', `${THUMBNAIL_SIZE}x${THUMBNAIL_SIZE}`,
-                    thumbnailPath
+                    'magick',
+                    filePath,
+                    '-resize',
+                    `${THUMBNAIL_SIZE}x${THUMBNAIL_SIZE}^`,
+                    '-gravity',
+                    'center',
+                    '-extent',
+                    `${THUMBNAIL_SIZE}x${THUMBNAIL_SIZE}`,
+                    thumbnailPath,
                 ],
-                flags: Gio.SubprocessFlags.STDERR_PIPE
+                flags: Gio.SubprocessFlags.STDERR_PIPE,
             });
             subprocess.init(null);
 
             subprocess.communicate_utf8_async(null, null, (source, result) => {
-                this._handleImageMagickResult(subprocess, result, placeholder, filePath, thumbnailPath);
+                this._handleImageMagickResult(
+                    subprocess,
+                    result,
+                    placeholder,
+                    filePath,
+                    thumbnailPath
+                );
             });
         } catch (error) {
             print('Error starting ImageMagick:', error.message);
@@ -176,7 +203,13 @@ var ThumbnailManager = class ThumbnailManager {
         }
     }
 
-    _handleImageMagickResult(subprocess, result, placeholder, filePath, thumbnailPath) {
+    _handleImageMagickResult(
+        subprocess,
+        result,
+        placeholder,
+        filePath,
+        thumbnailPath
+    ) {
         try {
             const [, , stderr] = subprocess.communicate_utf8_finish(result);
 
@@ -184,7 +217,11 @@ var ThumbnailManager = class ThumbnailManager {
                 this._loadCachedThumbnail(placeholder, thumbnailPath);
             } else {
                 print('ImageMagick error:', stderr);
-                this._generateThumbnailFallback(placeholder, filePath, 'unknown');
+                this._generateThumbnailFallback(
+                    placeholder,
+                    filePath,
+                    'unknown'
+                );
             }
         } catch (error) {
             print('Error with ImageMagick process:', error.message);
@@ -200,7 +237,10 @@ var ThumbnailManager = class ThumbnailManager {
 
             this._replacePlaceholderWithImage(placeholder, croppedPixbuf);
         } catch (error) {
-            print(`Error in fallback thumbnail generation for ${fileName}:`, error.message);
+            print(
+                `Error in fallback thumbnail generation for ${fileName}:`,
+                error.message
+            );
             this._showThumbnailError(placeholder);
         }
     }
@@ -216,7 +256,11 @@ var ThumbnailManager = class ThumbnailManager {
         const scaledWidth = Math.round(origWidth * scale);
         const scaledHeight = Math.round(origHeight * scale);
 
-        return pixbuf.scale_simple(scaledWidth, scaledHeight, GdkPixbuf.InterpType.BILINEAR);
+        return pixbuf.scale_simple(
+            scaledWidth,
+            scaledHeight,
+            GdkPixbuf.InterpType.BILINEAR
+        );
     }
 
     _cropPixbufToCenter(pixbuf) {
@@ -226,7 +270,12 @@ var ThumbnailManager = class ThumbnailManager {
         const cropX = Math.max(0, Math.round((width - THUMBNAIL_SIZE) / 2));
         const cropY = Math.max(0, Math.round((height - THUMBNAIL_SIZE) / 2));
 
-        return pixbuf.new_subpixbuf(cropX, cropY, THUMBNAIL_SIZE, THUMBNAIL_SIZE);
+        return pixbuf.new_subpixbuf(
+            cropX,
+            cropY,
+            THUMBNAIL_SIZE,
+            THUMBNAIL_SIZE
+        );
     }
 
     _replacePlaceholderWithImage(placeholder, pixbuf) {
@@ -256,7 +305,7 @@ var ThumbnailManager = class ThumbnailManager {
         const errorLabel = new Gtk.Label({
             label: '❌',
             width_request: THUMBNAIL_SIZE,
-            height_request: THUMBNAIL_SIZE
+            height_request: THUMBNAIL_SIZE,
         });
         placeholder.prepend(errorLabel);
     }
@@ -266,14 +315,21 @@ var ThumbnailManager = class ThumbnailManager {
             return;
         }
 
-        const { filePath, fileName } = imageFiles[index];
+        const {filePath, fileName} = imageFiles[index];
         const placeholder = this.createPlaceholder(grid, filePath, fileName);
 
         GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
             try {
-                this.loadThumbnailForPlaceholder(placeholder, filePath, fileName);
+                this.loadThumbnailForPlaceholder(
+                    placeholder,
+                    filePath,
+                    fileName
+                );
             } catch (error) {
-                print(`Error loading thumbnail for ${fileName}:`, error.message);
+                print(
+                    `Error loading thumbnail for ${fileName}:`,
+                    error.message
+                );
             }
 
             this.loadThumbnailsAsync(grid, imageFiles, index + 1);
@@ -285,4 +341,4 @@ var ThumbnailManager = class ThumbnailManager {
         const lowerFileName = fileName.toLowerCase();
         return IMAGE_EXTENSIONS.some(ext => lowerFileName.endsWith(ext));
     }
-};
+}

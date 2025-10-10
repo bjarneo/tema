@@ -1,22 +1,19 @@
-const { GLib, Gio, Adw, Gtk } = imports.gi;
+import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
+import Adw from 'gi://Adw?version=1';
+import Gtk from 'gi://Gtk?version=4.0';
 
-let SubprocessUtils;
-
-try {
-    ({ SubprocessUtils } = imports.src.SubprocessUtils);
-} catch (e) {
-    ({ SubprocessUtils } = imports.SubprocessUtils);
-}
+import {SubprocessUtils} from '../utils/SubprocessUtils.js';
 
 const WAL_PATHS = [
     'wal',
     '/usr/bin/wal',
     '/usr/local/bin/wal',
     GLib.get_home_dir() + '/.local/bin/wal',
-    '/bin/wal'
+    '/bin/wal',
 ];
 
-var WallpaperManager = class WallpaperManager {
+export class WallpaperManager {
     constructor(app) {
         this.app = app;
     }
@@ -29,7 +26,13 @@ var WallpaperManager = class WallpaperManager {
         }
 
         const spinnerDialog = this._createSpinnerDialog();
-        this._executeWal(walPath, imagePath, lightMode, spinnerDialog, fileName);
+        this._executeWal(
+            walPath,
+            imagePath,
+            lightMode,
+            spinnerDialog,
+            fileName
+        );
     }
 
     findWalExecutable() {
@@ -47,7 +50,13 @@ var WallpaperManager = class WallpaperManager {
         const walProcess = launcher.spawnv(walArgs);
 
         walProcess.communicate_utf8_async(null, null, (source, result) => {
-            this._handleWalCompletion(walProcess, result, spinnerDialog, fileName, lightMode);
+            this._handleWalCompletion(
+                walProcess,
+                result,
+                spinnerDialog,
+                fileName,
+                lightMode
+            );
         });
     }
 
@@ -63,7 +72,13 @@ var WallpaperManager = class WallpaperManager {
         return SubprocessUtils.createSubprocessLauncher();
     }
 
-    _handleWalCompletion(walProcess, result, spinnerDialog, fileName, lightMode) {
+    _handleWalCompletion(
+        walProcess,
+        result,
+        spinnerDialog,
+        fileName,
+        lightMode
+    ) {
         try {
             const [, , walStderr] = walProcess.communicate_utf8_finish(result);
             spinnerDialog.destroy();
@@ -90,7 +105,7 @@ var WallpaperManager = class WallpaperManager {
             transient_for: this.app.get_active_window(),
             modal: true,
             heading: 'Processing...',
-            body: 'Generating colors with pywal...'
+            body: 'Generating colors with pywal...',
         });
 
         const spinner = new Gtk.Spinner({
@@ -98,12 +113,12 @@ var WallpaperManager = class WallpaperManager {
             width_request: 32,
             height_request: 32,
             margin_top: 12,
-            margin_bottom: 12
+            margin_bottom: 12,
         });
 
         const box = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
-            spacing: 12
+            spacing: 12,
         });
         box.append(spinner);
         dialog.set_extra_child(box);
@@ -126,7 +141,7 @@ var WallpaperManager = class WallpaperManager {
         try {
             const checkProcess = new Gio.Subprocess({
                 argv: ['pgrep', '-x', 'swaybg'],
-                flags: Gio.SubprocessFlags.STDOUT_PIPE
+                flags: Gio.SubprocessFlags.STDOUT_PIPE,
             });
             checkProcess.init(null);
             const [, stdout] = checkProcess.communicate_utf8(null, null);
@@ -142,7 +157,7 @@ var WallpaperManager = class WallpaperManager {
         try {
             const killProcess = new Gio.Subprocess({
                 argv: ['pkill', '-x', 'swaybg'],
-                flags: Gio.SubprocessFlags.NONE
+                flags: Gio.SubprocessFlags.NONE,
             });
             killProcess.init(null);
             killProcess.wait(null);
@@ -156,7 +171,7 @@ var WallpaperManager = class WallpaperManager {
             const startArgs = this._buildSwaybgArgs(backgroundLink);
             const startProcess = new Gio.Subprocess({
                 argv: startArgs,
-                flags: Gio.SubprocessFlags.NONE
+                flags: Gio.SubprocessFlags.NONE,
             });
             startProcess.init(null);
         } catch (error) {
@@ -177,4 +192,4 @@ var WallpaperManager = class WallpaperManager {
     _isUwsmAvailable() {
         return SubprocessUtils.checkCommandExists('uwsm');
     }
-};
+}

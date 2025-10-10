@@ -1,4 +1,4 @@
-var ColorUtils = class ColorUtils {
+export class ColorUtils {
     static stripHash(hex) {
         return hex.replace('#', '');
     }
@@ -37,7 +37,7 @@ var ColorUtils = class ColorUtils {
         return {
             r: parseInt(cleanHex.substring(0, 2), 16),
             g: parseInt(cleanHex.substring(2, 4), 16),
-            b: parseInt(cleanHex.substring(4, 6), 16)
+            b: parseInt(cleanHex.substring(4, 6), 16),
         };
     }
 
@@ -55,7 +55,9 @@ var ColorUtils = class ColorUtils {
 
         const max = Math.max(r, g, b);
         const min = Math.min(r, g, b);
-        let h, s, l = (max + min) / 2;
+        let h,
+            s,
+            l = (max + min) / 2;
 
         if (max === min) {
             h = s = 0; // achromatic
@@ -79,7 +81,7 @@ var ColorUtils = class ColorUtils {
         return {
             h: Math.round(h * 360),
             s: Math.round(s * 100),
-            l: Math.round(l * 100)
+            l: Math.round(l * 100),
         };
     }
 
@@ -131,4 +133,4 @@ var ColorUtils = class ColorUtils {
             return 'Yaru-magenta';
         }
     }
-};
+}

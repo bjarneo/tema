@@ -1,13 +1,15 @@
-const { Adw, Gtk } = imports.gi;
+import Adw from 'gi://Adw?version=1';
+import Gtk from 'gi://Gtk?version=4.0';
+import GLib from 'gi://GLib';
 
 const VIM_KEY_MAP = {
-    104: Gtk.DirectionType.LEFT,  // h
-    106: Gtk.DirectionType.DOWN,  // j
-    107: Gtk.DirectionType.UP,    // k
-    108: Gtk.DirectionType.RIGHT  // l
+    104: Gtk.DirectionType.LEFT, // h
+    106: Gtk.DirectionType.DOWN, // j
+    107: Gtk.DirectionType.UP, // k
+    108: Gtk.DirectionType.RIGHT, // l
 };
 
-var DialogManager = class DialogManager {
+export class DialogManager {
     constructor(app) {
         this.app = app;
     }
@@ -36,7 +38,7 @@ var DialogManager = class DialogManager {
         const dialog = new Adw.MessageDialog({
             transient_for: parent,
             modal: true,
-            heading: 'Keyboard Shortcuts'
+            heading: 'Keyboard Shortcuts',
         });
 
         const label = new Gtk.Label({
@@ -54,7 +56,7 @@ q / Esc - Quit application`,
             margin_start: 12,
             margin_end: 12,
             margin_top: 12,
-            margin_bottom: 12
+            margin_bottom: 12,
         });
 
         dialog.set_extra_child(label);
@@ -70,14 +72,17 @@ q / Esc - Quit application`,
         const dialog = new Adw.MessageDialog({
             transient_for: parent,
             modal: true,
-            heading: 'Choose Theme Mode'
+            heading: 'Choose Theme Mode',
         });
 
         dialog.add_response('dark', 'Dark Mode');
         dialog.add_response('light', 'Light Mode');
         dialog.add_response('cancel', 'Cancel');
 
-        dialog.set_response_appearance('dark', Adw.ResponseAppearance.SUGGESTED);
+        dialog.set_response_appearance(
+            'dark',
+            Adw.ResponseAppearance.SUGGESTED
+        );
         dialog.set_default_response('dark');
         dialog.set_close_response('cancel');
 
@@ -114,7 +119,7 @@ q / Esc - Quit application`,
             transient_for: window,
             modal: true,
             heading: heading,
-            body: message
+            body: message,
         });
 
         dialog.add_response('ok', 'OK');
@@ -127,7 +132,14 @@ q / Esc - Quit application`,
         const dialog = this._createThemeEjectionDialog(parent, fileName);
 
         dialog.connect('response', (dialog, response) => {
-            this._handleThemeEjectionResponse(dialog, response, parent, filePath, fileName, callback);
+            this._handleThemeEjectionResponse(
+                dialog,
+                response,
+                parent,
+                filePath,
+                fileName,
+                callback
+            );
         });
 
         dialog.present();
@@ -138,14 +150,17 @@ q / Esc - Quit application`,
             transient_for: parent,
             modal: true,
             heading: 'Eject Theme',
-            body: `Create theme from: ${fileName}`
+            body: `Create theme from: ${fileName}`,
         });
 
         dialog.add_response('dark', 'Dark Mode');
         dialog.add_response('light', 'Light Mode');
         dialog.add_response('cancel', 'Cancel');
 
-        dialog.set_response_appearance('dark', Adw.ResponseAppearance.SUGGESTED);
+        dialog.set_response_appearance(
+            'dark',
+            Adw.ResponseAppearance.SUGGESTED
+        );
         dialog.set_default_response('dark');
         dialog.set_close_response('cancel');
 
@@ -154,7 +169,14 @@ q / Esc - Quit application`,
         return dialog;
     }
 
-    _handleThemeEjectionResponse(dialog, response, parent, filePath, fileName, callback) {
+    _handleThemeEjectionResponse(
+        dialog,
+        response,
+        parent,
+        filePath,
+        fileName,
+        callback
+    ) {
         if (response !== 'dark' && response !== 'light') {
             dialog.destroy();
             return;
@@ -162,18 +184,23 @@ q / Esc - Quit application`,
 
         const isLight = response === 'light';
         dialog.destroy();
-        this._showPathSelectionDialog(parent, filePath, fileName, isLight, callback);
+        this._showPathSelectionDialog(
+            parent,
+            filePath,
+            fileName,
+            isLight,
+            callback
+        );
     }
 
     _showPathSelectionDialog(parent, filePath, fileName, isLight, callback) {
-        const { GLib } = imports.gi;
         const defaultPath = this._getDefaultThemePath(fileName);
 
         const dialog = new Adw.MessageDialog({
             transient_for: parent,
             modal: true,
             heading: 'Select Output Path',
-            body: 'Enter the path where the theme should be created:'
+            body: 'Enter the path where the theme should be created:',
         });
 
         const entry = this._createPathEntry(defaultPath);
@@ -183,7 +210,15 @@ q / Esc - Quit application`,
         this._configurePathDialogResponses(dialog);
 
         dialog.connect('response', (dialog, response) => {
-            this._handlePathSelectionResponse(dialog, response, entry, filePath, fileName, isLight, callback);
+            this._handlePathSelectionResponse(
+                dialog,
+                response,
+                entry,
+                filePath,
+                fileName,
+                isLight,
+                callback
+            );
         });
 
         dialog.present();
@@ -191,7 +226,6 @@ q / Esc - Quit application`,
     }
 
     _getDefaultThemePath(fileName) {
-        const { GLib } = imports.gi;
         const homeDir = GLib.get_home_dir();
         const themeName = fileName.replace(/\.[^.]+$/, '');
         return `${homeDir}/omarchy-${themeName}-theme`;
@@ -204,14 +238,14 @@ q / Esc - Quit application`,
             margin_top: 12,
             margin_bottom: 12,
             margin_start: 12,
-            margin_end: 12
+            margin_end: 12,
         });
     }
 
     _createEntryContainer(entry) {
         const box = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
-            spacing: 6
+            spacing: 6,
         });
         box.append(entry);
         return box;
@@ -220,16 +254,27 @@ q / Esc - Quit application`,
     _configurePathDialogResponses(dialog) {
         dialog.add_response('create', 'Create Theme');
         dialog.add_response('cancel', 'Cancel');
-        dialog.set_response_appearance('create', Adw.ResponseAppearance.SUGGESTED);
+        dialog.set_response_appearance(
+            'create',
+            Adw.ResponseAppearance.SUGGESTED
+        );
         dialog.set_default_response('create');
         dialog.set_close_response('cancel');
     }
 
-    _handlePathSelectionResponse(dialog, response, entry, filePath, fileName, isLight, callback) {
+    _handlePathSelectionResponse(
+        dialog,
+        response,
+        entry,
+        filePath,
+        fileName,
+        isLight,
+        callback
+    ) {
         if (response === 'create') {
             const outputPath = entry.get_text();
             callback(filePath, fileName, isLight, outputPath);
         }
         dialog.destroy();
     }
-};
+}
