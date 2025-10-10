@@ -1,4 +1,5 @@
-pkg/ 
-src/tema/ 
-tema-git-1.0.0.*any.pkg.tar.zst 
-tema/
+node_modules/
+*.log
+.cache/
+blueprints/
+temp/
